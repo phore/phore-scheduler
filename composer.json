@@ -1,0 +1,36 @@
+{
+  "name": "phore/micro-app",
+  "type": "library",
+  "license": "MIT",
+  "description": "Micro framework for rest api webservices",
+  "homepage": "https://infracamp.org/phore/",
+  "authors": [
+    {
+      "name": "Matthias Leuffen",
+      "email": "m@tth.es"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Phore\\MicroApp\\": "src/"
+    },
+    "files": [
+      "src/functions.php"
+    ]
+  },
+  "require": {
+    "php" : ">7.1",
+    "phore/di-base": "2.1.1",
+    "phore/core": "dev-master",
+    "ext-json": "*",
+    "ext-yaml": "*"
+  },
+  "require-dev": {
+    "phore/theme-coreui": "dev-master",
+    "phore/http-client": "*",
+    "phpunit/phpunit": "*"
+  },
+  "suggest": {
+  },
+  "minimum-stability": "dev"
+}
