@@ -6,7 +6,7 @@
  * Time: 12:34
  */
 
-namespace Phore\MicroApp\Type;
+namespace Phore\Scheduler\Type;
 
 /**
  * Class PhoreSchedulerJob
@@ -16,18 +16,22 @@ namespace Phore\MicroApp\Type;
 class PhoreSchedulerJob
 {
 
+    const STATUS_PENDING = "pending";
+    const STATUS_RUNNING = "running";
+    const STATUS_FAILED = "failed";
+    const STATUS_OK = "ok";
+
     public $jobId;
+
+    public $runAtTs = 0;
+
+    public $name;
 
     public $status;
 
-    /**
-     * @var PhoreSchedulerTask[]
-     */
-    public $pendingTasks = [];
-
-    /**
-     * @var PhoreSchedulerTask[]
-     */
-    public $doneTasks = [];
+    public function __construct()
+    {
+        $this->jobId = uniqid();
+    }
 
 }

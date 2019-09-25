@@ -1,0 +1,11 @@
+version: "3.7"
+
+services:
+  redis:
+    image: redis
+    networks:
+      - phore-scheduler
+
+networks:
+  phore-scheduler:
+    external: true

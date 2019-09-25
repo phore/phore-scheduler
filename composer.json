@@ -1,8 +1,8 @@
 {
-  "name": "phore/micro-app",
+  "name": "phore/scheduler",
   "type": "library",
   "license": "MIT",
-  "description": "Micro framework for rest api webservices",
+  "description": "Cloud scheduler",
   "homepage": "https://infracamp.org/phore/",
   "authors": [
     {
@@ -12,22 +12,17 @@
   ],
   "autoload": {
     "psr-4": {
-      "Phore\\MicroApp\\": "src/"
+      "Phore\\Scheduler\\": "src/"
     },
     "files": [
-      "src/functions.php"
     ]
   },
   "require": {
     "php" : ">7.2",
     "phore/filesystem": "dev-master",
-    "phore/core": "dev-master",
-    "ext-json": "*",
-    "ext-yaml": "*"
+    "phore/core": "dev-master"
   },
   "require-dev": {
-    "phore/theme-coreui": "dev-master",
-    "phore/http-client": "*",
     "phpunit/phpunit": "*"
   },
   "suggest": {

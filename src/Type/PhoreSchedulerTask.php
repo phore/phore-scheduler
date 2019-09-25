@@ -6,7 +6,7 @@
  * Time: 12:35
  */
 
-namespace Phore\MicroApp\Type;
+namespace Phore\Scheduler\Type;
 
 /**
  * Class PhoreSchedulerTask
@@ -16,6 +16,12 @@ namespace Phore\MicroApp\Type;
 class PhoreSchedulerTask
 {
 
+    const PENDING = "pending";
+    const TEMPFAIL = "tempfail";
+    const FAILED = "failed";
+    const RUNNING = "running";
+    const OK = "ok";
+
 
     public $taskId;
 
@@ -23,12 +29,21 @@ class PhoreSchedulerTask
 
     public $arguments;
 
-    public $failCount = 0;
+    public $status;
 
-    public $errorMsg;
+    public $retryCount = 3;
+
+    public $message;
+
+    public $return;
 
     public $startTime;
 
     public $endTime;
+
+    public function __construct()
+    {
+        $this->taskId = uniqid();
+    }
 
 }

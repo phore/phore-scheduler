@@ -1,0 +1,16 @@
+#!/usr/bin/php
+<?php
+
+namespace Phore\Scheduler;
+
+if (is_dir(__DIR__ . "/../vendor")) {
+    require __DIR__ . "/../vendor/autoload.php";
+} else {
+    require __DIR__ . "/../../../autoload.php";
+}
+
+
+echo "Phore Scheduler Worker Process";
+
+
+
