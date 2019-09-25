@@ -1,0 +1,58 @@
+#!/usr/bin/php
+<?php
+
+namespace Phore\Scheduler;
+
+use Phore\Log\Logger\PhoreEchoLoggerDriver;
+use Psr\Log\LogLevel;
+
+if (is_dir(__DIR__ . "/../vendor")) {
+    require __DIR__ . "/../vendor/autoload.php";
+} else {
+    require __DIR__ . "/../../../autoload.php";
+}
+
+
+echo "\nPhore Scheduler Worker Process\n";
+
+function printHelp() {
+    echo <<<EOT
+
+scheduler [-ds] [--autoload <file>]
+
+Process exact one Job and exit
+
+Parameters:
+===========
+--autoload <php-file>   Autoload this file
+-d  Background-Mode. Processes jobs in order
+-s  Silent: Don't show except Emergency
+
+
+EOT;
+}
+
+$options = getopt("sdh", ["autoload:"]);
+
+if(isset ($options["h"])) {
+    printHelp();
+    exit;
+}
+
+if (isset ($options["s"]))
+    phore_log()->setLogLevel(LogLevel::EMERGENCY);
+
+if (isset ($options["autoload"])) {
+    phore_log()->notice("Loading php file: " . $options["autoload"]);
+    require ($options["autoload"]);
+}
+
+$sched = PhoreScheduler::GetSingleton();
+$sched->setLogger(phore_log());
+if (isset ($options["d"])) {
+    $sched->run();
+} else {
+    $sched->runNext();
+}
+
+

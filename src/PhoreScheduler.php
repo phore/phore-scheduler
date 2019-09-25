@@ -4,11 +4,16 @@
 namespace Phore\Scheduler;
 
 
+use Phore\Log\Logger\PhoreNullLogger;
+use Phore\Log\PhoreLogger;
 use Phore\Scheduler\Connector\PhoreSchedulerRedisConnector;
 use Phore\Scheduler\Type\PhoreSchedulerJob;
 use Phore\Scheduler\Type\PhoreSchedulerTask;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
-class PhoreScheduler
+class PhoreScheduler implements LoggerAwareInterface
 {
 
     /**
@@ -16,14 +21,28 @@ class PhoreScheduler
      */
     private $connector;
 
+    protected $commands = [];
+
+    /**
+     * @var NullLogger
+     */
+    protected $log;
+
 
     public function __construct(PhoreSchedulerRedisConnector $connector)
     {
         $this->connector = $connector;
+        $this->log = new NullLogger();
     }
 
 
-    protected $commands = [];
+
+
+    public function setLogger(LoggerInterface $logger) : self
+    {
+        $this->log = $logger;
+        return $this;
+    }
 
 
     public function defineCommand(string $name, callable $fn) : self
@@ -104,10 +123,10 @@ class PhoreScheduler
 
     public function runNext() : bool
     {
-
+        $this->log->debug("scanning for new tasks");
         $nextTask = $this->_getNextTask();
         if ($nextTask === null) {
-
+            $this->log->debug("no new tasks to be processed");
             return false;
         }
         [$job, $task] = $nextTask;
@@ -115,19 +134,32 @@ class PhoreScheduler
         /* @var $task PhoreSchedulerTask */
 
         if ( ! isset($this->commands[$task->command])) {
+            $this->log->alert("Job: :jobName Task: :taskId Command :command undefined", [
+                "jobName" => $job->jobName,
+                "taskId" => $task->taskId,
+                "command" => $task->command
+            ]);
             $this->_failTask($job, $task, "command undefine: '{$task->command}'");
         }
 
         try {
+            $this->log->notice("running task :taskId (Command: :command)", [
+                "taskId" => $task,
+                "command" => $task->command,
+                "arguments" => phore_json_encode($task->arguments)
+            ]);
             $task->startTime = microtime(true);
             $this->connector->updateTask($job, $task);
             $return = ($this->commands[$task->command])($task->arguments);
             $task->endTime = microtime(true);
             $task->return = phore_serialize($return);
             $this->_doneTask($job, $task, "OK");
+            $this->log->notice("Job successful");
         } catch (\ErrorException $e) {
+            $this->log->alert("Job failed with error: {$e->getMessage()}\n\n" , $e->getTraceAsString());
             $this->_failTask($job, $task, "Error: " . $e->getMessage() . "\n\n" . $e->getTraceAsString());
         } catch (\Exception $ex) {
+            $this->log->alert("Job failed with exception: {$ex->getMessage()}\n\n" . $ex->getTraceAsString());
             $this->_failTask($job, $task, "Exception: " . $ex->getMessage() . "\n\n" . $ex->getTraceAsString());
         }
         return true;
@@ -136,6 +168,7 @@ class PhoreScheduler
     public function run()
     {
         while(true) {
+            $this->log->notice("Starting in background mode.");
             if ( ! $this->runNext()) {
                 sleep(1);
             }
@@ -185,6 +218,21 @@ class PhoreScheduler
     }
 
 
+
+
+    private static $instance = null;
+
+    public static function Init(PhoreSchedulerRedisConnector $connector) : self {
+        self::$instance = new self($connector);
+        return self::$instance;
+    }
+
+    public static function GetSingleton() : self
+    {
+        if (self::$instance === null)
+            throw new \InvalidArgumentException("Scheduler not initialized. Call PhoreScheduler::Init()");
+        return self::$instance;
+    }
 
 
 }

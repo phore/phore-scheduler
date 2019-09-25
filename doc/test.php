@@ -1,10 +1,16 @@
 <?php
 
 
-$fd = function() {
-    echo "wurst";
-};
+namespace Test;
 
-$ref = new ReflectionFunction($fd);
+use Phore\Scheduler\Connector\PhoreSchedulerRedisConnector;
+use Phore\Scheduler\PhoreScheduler;
 
-echo REflection::export($ref, true);
+$redis = new \Redis();
+$redis->connect("redis");
+
+$scheduler = PhoreScheduler::Init(new PhoreSchedulerRedisConnector($redis));
+
+$scheduler->defineCommand("test", function ($args) {
+    echo "HELLO WORLD!\n";
+});

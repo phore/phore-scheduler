@@ -19,12 +19,17 @@
   },
   "require": {
     "php" : ">7.2",
-    "phore/filesystem": "dev-master",
+    "psr/log": "^1.1",
+    "phore/log": "dev-master",
     "phore/core": "dev-master"
   },
   "require-dev": {
     "phpunit/phpunit": "*"
+
   },
+  "bin": [
+    "bin/scheduler"
+  ],
   "suggest": {
   },
   "minimum-stability": "dev"
