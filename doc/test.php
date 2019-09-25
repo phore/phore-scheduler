@@ -13,4 +13,8 @@ $scheduler = PhoreScheduler::Init(new PhoreSchedulerRedisConnector($redis));
 
 $scheduler->defineCommand("test", function ($args) {
     echo "HELLO WORLD!\n";
+    new Wurst();
 });
+
+
+$scheduler->createJob("test")->addTask("test")->save();

@@ -5,5 +5,5 @@ Cloud command scheduler
 ## Usage:
 
 ```
-$scheduler = 
+vendor/bin/scheduler run 
 ```

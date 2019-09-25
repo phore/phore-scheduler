@@ -144,7 +144,7 @@ class PhoreScheduler implements LoggerAwareInterface
 
         try {
             $this->log->notice("running task :taskId (Command: :command)", [
-                "taskId" => $task,
+                "taskId" => $task->taskId,
                 "command" => $task->command,
                 "arguments" => phore_json_encode($task->arguments)
             ]);
@@ -155,8 +155,8 @@ class PhoreScheduler implements LoggerAwareInterface
             $task->return = phore_serialize($return);
             $this->_doneTask($job, $task, "OK");
             $this->log->notice("Job successful");
-        } catch (\ErrorException $e) {
-            $this->log->alert("Job failed with error: {$e->getMessage()}\n\n" , $e->getTraceAsString());
+        } catch (\Error $e) {
+            $this->log->alert("Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString());
             $this->_failTask($job, $task, "Error: " . $e->getMessage() . "\n\n" . $e->getTraceAsString());
         } catch (\Exception $ex) {
             $this->log->alert("Job failed with exception: {$ex->getMessage()}\n\n" . $ex->getTraceAsString());
