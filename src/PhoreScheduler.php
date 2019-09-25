@@ -181,21 +181,24 @@ class PhoreScheduler implements LoggerAwareInterface
         $ret = [];
 
         foreach ($this->connector->listJobs() as $job) {
+
             if ($filterStatus !== null && $job->status !== $filterStatus) {
                 continue;
             }
+
             $curJobInfo = (array)$job;
             $tasks = $this->connector->listTasks($job);
-            $curJobInfo["tasks"] = (array)$tasks;
+            $curJobInfo["tasks"] = [];
 
-            $curJobInfo["tasks"] = 0;
+            $curJobInfo["tasks_all"] = 0;
             $curJobInfo["tasks_pending"] = 0;
             $curJobInfo["tasks_running"] = 0;
             $curJobInfo["tasks_ok"] = 0;
             $curJobInfo["tasks_failed"] = 0;
 
             foreach ($tasks as $task) {
-                $curJobInfo["tasks"]++;
+                $curJobInfo["tasks"][] = (array)$task;
+                $curJobInfo["tasks_all"]++;
                 switch ($task->status) {
                     case $task::RUNNING:
                         $curJobInfo["tasks_running"]++;
@@ -211,10 +214,9 @@ class PhoreScheduler implements LoggerAwareInterface
                         break;
                 }
             }
-
             $ret[] = $curJobInfo;
         }
-        return $curJobInfo;
+        return $ret;
     }
 
 
