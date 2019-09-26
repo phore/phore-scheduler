@@ -3,6 +3,7 @@
 
 namespace Phore\Scheduler;
 
+use Phore\Core\Helper\PhoreConsoleColor;
 use Phore\Log\Logger\PhoreEchoLoggerDriver;
 use Psr\Log\LogLevel;
 
@@ -12,47 +13,61 @@ if (is_dir(__DIR__ . "/../vendor")) {
     require __DIR__ . "/../../../autoload.php";
 }
 
+set_exception_handler(function ($ex) {
+    phore_log()->emergency("Error: " . $ex->getMessage() . " (add -v to see full exception)");
 
-echo "\nPhore Scheduler Worker Process\n";
+    PhoreConsoleColor::SetColor("black", "red");
+    echo "\n";
+    echo "\n  " . implode(" ", $GLOBALS["argv"]);
+    echo "\n  Emergency: " . $ex->getMessage() . "\n";
+    PhoreConsoleColor::Default();
+    echo "\n";
 
-function printHelp() {
-    echo <<<EOT
+    exit(254);
+});
 
-scheduler [-ds] [--autoload <file>]
+$opts = phore_getopt("hsd", ["autoload:"]);
 
-Process exact one Job and exit
-
-Parameters:
-===========
---autoload <php-file>   Autoload this file
--d  Background-Mode. Processes jobs in order
--s  Silent: Don't show except Emergency
-
-
-EOT;
-}
-
-$options = getopt("sdh", ["autoload:"]);
-
-if(isset ($options["h"])) {
+if ($opts->has("h") || $opts->has("help")) {
     printHelp();
     exit;
 }
 
-if (isset ($options["s"]))
+
+if ($opts->has("s"))
     phore_log()->setLogLevel(LogLevel::EMERGENCY);
 
-if (isset ($options["autoload"])) {
-    phore_log()->notice("Loading php file: " . $options["autoload"]);
-    require ($options["autoload"]);
+if ($opts->has("autoload")) {
+    phore_log()->notice("Loading php file: " . $opts->get("autoload"));
+    require ($opts->get("autoload"));
 }
 
 $sched = PhoreScheduler::GetSingleton();
 $sched->setLogger(phore_log());
-if (isset ($options["d"])) {
+if ($opts->has("d")) {
     $sched->run();
 } else {
     $sched->runNext();
 }
 
 
+function printHelp(string $errorMsg=null)
+{
+    if ($errorMsg !== null)
+        $errorMsg .= "\nSee '" . $GLOBALS["argv"][0] . " --help'\n";
+    echo <<<EOT
+$errorMsg
+
+Usage: {$GLOBALS["argv"][0]} [OPTIONS]
+
+Run the scheduler queue and process the next task
+
+Options:
+  -h, --help            Show Help and exit
+      --autoload file   Autoload php file
+  -d                    Daemon mode: Run forever
+  -s                    Silent mode (don't output data except for errors)
+
+
+EOT;
+}
