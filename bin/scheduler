@@ -37,18 +37,21 @@ if ($opts->has("h") || $opts->has("help")) {
 if ($opts->has("s"))
     phore_log()->setLogLevel(LogLevel::EMERGENCY);
 
+$autoload = null;
 if ($opts->has("autoload")) {
     phore_log()->notice("Loading php file: " . $opts->get("autoload"));
-    require ($opts->get("autoload"));
+    require($opts->get("autoload"));
 }
+
 
 $sched = PhoreScheduler::GetSingleton();
 $sched->setLogger(phore_log());
 if ($opts->has("d")) {
-    $sched->run();
+   $sched->run();
 } else {
     $sched->runNext();
 }
+
 
 
 function printHelp(string $errorMsg=null)

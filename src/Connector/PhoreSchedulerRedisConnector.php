@@ -19,16 +19,36 @@ class PhoreSchedulerRedisConnector
      * @var \Redis
      */
     private $redis;
+    private $redisHost;
 
     private $prefix;
 
-    public function __construct(\Redis $redis, $prefix="PhoreScheduler")
+    public function __construct(string $redis_host, $prefix="PhoreScheduler")
     {
-        $this->redis = $redis;
+        
+        $this->redis = new \Redis();
+        $this->redisHost = $redis_host;            
         $this->prefix = $prefix;
     }
 
+    
+    public function connect()
+    {
+        $this->redis->connect($this->redisHost);
+    }
+    
+    
+    public function isConnected() : bool
+    {
+        try {
+            $this->redis->ping();
+            return true;
+        } catch (\RedisException $e) {
+            return false; 
+        }        
+    }
 
+    
     public function addJob(PhoreSchedulerJob $job)
     {
         $this->redis->set($this->prefix . "_job_" . $job->jobId, phore_serialize($job));

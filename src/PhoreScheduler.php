@@ -169,8 +169,16 @@ class PhoreScheduler implements LoggerAwareInterface
     {
         while(true) {
             $this->log->notice("Starting in background mode.");
-            if ( ! $this->runNext()) {
-                sleep(1);
+            try {
+                if ( ! $this->connector->isConnected())
+                    $this->connector->connect();
+                
+                if (!$this->runNext()) {
+                    sleep(1);
+                }
+            } catch (\Exception $e) {
+                $this->log->alert("Exception running scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
+                sleep(10);
             }
         }
     }

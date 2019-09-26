@@ -42,22 +42,28 @@ class PhoreSchedulerModule implements AppModule
 
             $table = new Table(["JobId", "Name", "Tasks", "Status"]);
             $jobInfo = $scheduler->getJobInfo();
-            foreach ($jobInfo as $ji) {
-                $table->row([
+
+
+            $tbl = phore_array_transform($jobInfo, function ($index, $ji) {
+
+                return [
+                    $index + 1,
                     $ji["jobId"],
                     $ji["name"],
-                    $ji["tasks_all"] . " (Success: {$ji["tasks_ok"]}",
-                    $ji["status"]
-                ]);
-            }
+                    $ji["status"],
+                    $ji["tasks_all"] . " Tasks (Pending: {$ji["tasks_pending"]}, Success: {$ji["tasks_ok"]}, Failed: {$ji["tasks_failed"]})"
+                ];
+            });
 
 
             $e = fhtml();
             $e[] = pt()->card(
                 "Scheduler",
-                [
-                    $table
-                ]
+                pt("table-striped table-hover")->basic_table(
+                    ["#", "JobID", "Job Name", "Status", "Task Status"],
+                    $tbl,
+                    ["","",""]
+                )
 
             );
 
