@@ -184,7 +184,9 @@ class PhoreScheduler implements LoggerAwareInterface
     }
 
 
-    public function getJobInfo(string $filterStatus=null) : array
+
+
+    public function getJobInfo(string $filterStatus=null, string $jobId=null) : array
     {
         $ret = [];
 
@@ -193,6 +195,8 @@ class PhoreScheduler implements LoggerAwareInterface
             if ($filterStatus !== null && $job->status !== $filterStatus) {
                 continue;
             }
+            if ($jobId !== null && $jobId !== $job->jobId)
+                continue;
 
             $curJobInfo = (array)$job;
             $tasks = $this->connector->listTasks($job);

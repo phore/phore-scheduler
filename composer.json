@@ -23,7 +23,8 @@
     "phore/core": "dev-master"
   },
   "require-dev": {
-    "phpunit/phpunit": "*"
+    "phpunit/phpunit": "*",
+    "phore/status-page": "dev-master"
 
   },
   "bin": [
