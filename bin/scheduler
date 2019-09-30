@@ -49,10 +49,8 @@ if ($opts->has("autoload")) {
 $sched = PhoreScheduler::GetSingleton();
 $sched->setLogger(phore_log());
 if ($opts->has("d")) {
-
    $sched->run();
 } else {
-    echo "running";
     $sched->runNext();
 }
 
