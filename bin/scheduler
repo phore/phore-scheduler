@@ -13,8 +13,10 @@ if (is_dir(__DIR__ . "/../vendor")) {
     require __DIR__ . "/../../../autoload.php";
 }
 
-set_exception_handler(function ($ex) {
+set_exception_handler(function (\Exception $ex) {
     phore_log()->emergency("Error: " . $ex->getMessage() . " (add -v to see full exception)");
+
+    echo $ex->getTraceAsString();
 
     PhoreConsoleColor::SetColor("black", "red");
     echo "\n";
@@ -47,8 +49,10 @@ if ($opts->has("autoload")) {
 $sched = PhoreScheduler::GetSingleton();
 $sched->setLogger(phore_log());
 if ($opts->has("d")) {
+
    $sched->run();
 } else {
+    echo "running";
     $sched->runNext();
 }
 

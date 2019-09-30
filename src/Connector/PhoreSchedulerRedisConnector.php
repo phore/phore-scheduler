@@ -23,6 +23,8 @@ class PhoreSchedulerRedisConnector
 
     private $prefix;
 
+    private $connectWasCalled = false;
+
     public function __construct(string $redis_host, $prefix="PhoreScheduler")
     {
         
@@ -35,6 +37,7 @@ class PhoreSchedulerRedisConnector
     public function connect()
     {
         $this->redis->connect($this->redisHost);
+        $this->connectWasCalled = true;
     }
     
     
@@ -51,6 +54,8 @@ class PhoreSchedulerRedisConnector
     
     public function addJob(PhoreSchedulerJob $job)
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $this->redis->set($this->prefix . "_job_" . $job->jobId, phore_serialize($job));
         $this->redis->lPush($this->prefix . "_jobs", $job->jobId);
     }
@@ -58,6 +63,8 @@ class PhoreSchedulerRedisConnector
 
     public function updateJob(PhoreSchedulerJob $job)
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $this->redis->set($this->prefix . "_job_" . $job->jobId, phore_serialize($job));
     }
 
@@ -67,6 +74,8 @@ class PhoreSchedulerRedisConnector
      */
     public function listJobs () : array
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $jobs = [];
         foreach ($this->redis->lRange($this->prefix . "_jobs", 0, -1) as $jobId) {
             $jobData = $this->redis->get($this->prefix . "_job_" . $jobId);
@@ -83,6 +92,8 @@ class PhoreSchedulerRedisConnector
 
     public function addTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task)
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $this->redis->set($this->prefix . "_job_{$job->jobId}_task_{$task->taskId}", phore_serialize($task));
         $this->redis->lPush($this->prefix . "_job_{$job->jobId}_tasks", $task->taskId);
     }
@@ -90,6 +101,8 @@ class PhoreSchedulerRedisConnector
 
     public function updateTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task)
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $this->redis->set($this->prefix . "_job_{$job->jobId}_task_{$task->taskId}", phore_serialize($task));
     }
 
@@ -101,6 +114,8 @@ class PhoreSchedulerRedisConnector
      */
     public function listTasks(PhoreSchedulerJob $job, $filter=null)
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $tasks = [];
         $taskIds = $this->redis->lRange($this->prefix . "_job_{$job->jobId}_tasks", 0, -1);
         foreach ($taskIds as $taskId) {
@@ -117,6 +132,8 @@ class PhoreSchedulerRedisConnector
 
     public function rmTask(PhoreSchedulerJob $job, $taskId)
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $this->redis->delete($this->prefix . "_job_{$job->jobId}_tasks", $taskId);
         $this->redis->lRem($this->prefix . "_job_{$job->jobId}_tasks", $taskId, 1);
     }
@@ -133,12 +150,16 @@ class PhoreSchedulerRedisConnector
      */
     public function lockTask(PhoreSchedulerTask $task) : bool
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         return $this->redis->sAdd($this->prefix . "_locked_tasks", $task->taskId);
     }
 
 
     public function unlockTask(PhoreSchedulerTask $task)
     {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
         $this->redis->sRem($this->prefix . "_locked_tasks", $task->taskId);
     }
 }
