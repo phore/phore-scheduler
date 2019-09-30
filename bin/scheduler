@@ -35,7 +35,7 @@ if ($opts->has("h") || $opts->has("help")) {
 
 
 if ($opts->has("s"))
-    phore_log()->setLogLevel(LogLevel::EMERGENCY);
+    phore_log()->setLogLevel(LogLevel::ERROR);
 
 $autoload = null;
 if ($opts->has("autoload")) {

@@ -163,7 +163,8 @@ class PhoreSchedulerModule implements AppModule
                     $ji["jobId"],
                     $ji["name"],
                     $ji["status"],
-                    $ji["tasks_all"] . " Tasks (Pending: {$ji["tasks_pending"]}, Success: {$ji["tasks_ok"]}, Failed: {$ji["tasks_failed"]})",
+
+                    $ji["tasks_all"] . " Tasks (Pending: {$ji["tasks_pending"]}, Running: {$ji["tasks_running"]}, Success: {$ji["tasks_ok"]}, Failed: {$ji["tasks_failed"]})",
                     gmdate("Y-m-d H:i:s", $ji["runAtTs"]) . "GMT",
                     [
                         fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}scheduler/{$ji["jobId"]}"])

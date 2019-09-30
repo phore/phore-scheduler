@@ -124,6 +124,10 @@ class PhoreScheduler implements LoggerAwareInterface
     public function runNext() : bool
     {
         $this->log->debug("scanning for new tasks");
+        
+        if ( ! $this->connector->isConnected())
+            $this->connector->connect();
+        
         $nextTask = $this->_getNextTask();
         if ($nextTask === null) {
             $this->log->debug("no new tasks to be processed");
@@ -170,9 +174,7 @@ class PhoreScheduler implements LoggerAwareInterface
         while(true) {
             $this->log->notice("Starting in background mode.");
             try {
-                if ( ! $this->connector->isConnected())
-                    $this->connector->connect();
-                
+                                
                 if (!$this->runNext()) {
                     sleep(1);
                 }
