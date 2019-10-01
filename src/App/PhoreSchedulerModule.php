@@ -22,7 +22,7 @@ class PhoreSchedulerModule implements AppModule
     private $startRoute;
     private $diName;
 
-    public function __construct(string $startRoute = "/", $diName="phoreScheduler")
+    public function __construct(string $startRoute = "", $diName="phoreScheduler")
     {
         $this->startRoute = $startRoute;
         $this->diName = $diName;
@@ -167,7 +167,7 @@ class PhoreSchedulerModule implements AppModule
                     $ji["tasks_all"] . " Tasks (Pending: {$ji["tasks_pending"]}, Running: {$ji["tasks_running"]}, Success: {$ji["tasks_ok"]}, Failed: {$ji["tasks_failed"]})",
                     gmdate("Y-m-d H:i:s", $ji["runAtTs"]) . "GMT",
                     [
-                        fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}scheduler/{$ji["jobId"]}"])
+                        fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"])
                     ]
                 ];
             });
