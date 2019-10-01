@@ -37,6 +37,10 @@ class PhoreScheduler implements LoggerAwareInterface
 
 
 
+    public function getConnector() : PhoreSchedulerRedisConnector
+    {
+        return $this->connector;
+    }
 
     public function setLogger(LoggerInterface $logger) : self
     {

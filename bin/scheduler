@@ -4,6 +4,7 @@
 namespace Phore\Scheduler;
 
 use Phore\Core\Helper\PhoreConsoleColor;
+use Phore\Core\Helper\PhoreSimpleParallelRunner;
 use Phore\Log\Logger\PhoreEchoLoggerDriver;
 use Psr\Log\LogLevel;
 
@@ -13,7 +14,7 @@ if (is_dir(__DIR__ . "/../vendor")) {
     require __DIR__ . "/../../../autoload.php";
 }
 
-set_exception_handler(function (\Exception $ex) {
+set_exception_handler(function ( $ex) {
     phore_log()->emergency("Error: " . $ex->getMessage() . " (add -v to see full exception)");
 
     echo $ex->getTraceAsString();
@@ -28,7 +29,7 @@ set_exception_handler(function (\Exception $ex) {
     exit(254);
 });
 
-$opts = phore_getopt("hsd", ["autoload:"]);
+$opts = phore_getopt("hsd::", ["autoload:"]);
 
 if ($opts->has("h") || $opts->has("help")) {
     printHelp();
@@ -49,7 +50,15 @@ if ($opts->has("autoload")) {
 $sched = PhoreScheduler::GetSingleton();
 $sched->setLogger(phore_log());
 if ($opts->has("d")) {
-   $sched->run();
+    if ($opts->get("d") > 1) {
+        PhoreSimpleParallelRunner::Run(function () use ($sched) {
+            // Must reconnect in order to get a separate connectioncq
+            $sched->getConnector()->reconnect();
+            $sched->run();
+        }, $opts->get("d"));
+    } else {
+        $sched->run();
+    }
 } else {
     $sched->runNext();
 }
@@ -70,7 +79,7 @@ Run the scheduler queue and process the next task
 Options:
   -h, --help            Show Help and exit
       --autoload file   Autoload php file
-  -d                    Daemon mode: Run forever
+  -d<n_procs>           Daemon mode: Run forever (fork n procs - default: 1)
   -s                    Silent mode (don't output data except for errors)
 
 

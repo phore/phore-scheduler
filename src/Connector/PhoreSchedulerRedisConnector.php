@@ -33,6 +33,18 @@ class PhoreSchedulerRedisConnector
         $this->prefix = $prefix;
     }
 
+
+    /**
+     * Reconnect with separate connection (e.g. Multithreading)
+     *
+     */
+    public function reconnect()
+    {
+        $this->redis = new \Redis();
+        $this->connectWasCalled = false;
+        $this->connect();
+    }
+
     
     public function connect()
     {
