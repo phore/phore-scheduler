@@ -167,6 +167,12 @@ class PhoreSchedulerRedisConnector
         return $this->redis->sAdd($this->prefix . "_locked_tasks", $task->taskId);
     }
 
+    public function lockRescheduleTask(PhoreSchedulerTask $task) : bool
+    {
+        if ( ! $this->connectWasCalled)
+            $this->connect();
+        return $this->redis->sAdd($this->prefix . "_locked_rescheduled_tasks", $task->taskId);
+    }
 
     public function unlockTask(PhoreSchedulerTask $task)
     {

@@ -35,9 +35,9 @@ class PhoreSchedulerJobAccessor
     }
 
 
-    public function addTask(string $command, array $arguments = []) : self
+    public function addTask(string $command, array $arguments = [], $retries = 3, $retryInterval = 60, $timeout = 600) : self
     {
-        $this->tasks[] = $task = new PhoreSchedulerTask();
+        $this->tasks[] = $task = new PhoreSchedulerTask($retries, $retryInterval, $timeout);
         $task->command = $command;
         $task->arguments = $arguments;
         return $this;
@@ -47,6 +47,24 @@ class PhoreSchedulerJobAccessor
     {
         $this->scheduler->_createJob($this->job, $this->tasks);
     }
+
+    /**
+     * @return PhoreSchedulerJob
+     */
+    public function getJob(): PhoreSchedulerJob
+    {
+        return $this->job;
+    }
+
+    /**
+     * @return array
+     */
+    public function getTasks(): array
+    {
+        return $this->tasks;
+    }
+
+
 
 
 }

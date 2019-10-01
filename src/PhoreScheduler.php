@@ -79,7 +79,7 @@ class PhoreScheduler implements LoggerAwareInterface
         $jobs = $this->connector->listJobs();
         foreach ($jobs as $job) {
             if ($job->status === PhoreSchedulerJob::STATUS_PENDING) {
-                if ($job->runAtTs < time()) {
+                if ($job->runAtTs <= time()) {
                     $job->status = PhoreSchedulerJob::STATUS_RUNNING;
                     $this->connector->updateJob($job);
                 }
@@ -88,15 +88,34 @@ class PhoreScheduler implements LoggerAwareInterface
                 continue;
             $numPending = 0;
             foreach ($this->connector->listTasks($job) as $task) {
-                if (in_array($task->status, [PhoreSchedulerTask::PENDING, PhoreSchedulerTask::RUNNING]))
+                if ($task->startTime > microtime(true)) {
+                    // skip retries until retryInterval reached, but note as pending
                     $numPending++;
-                if ($task->status === PhoreSchedulerTask::PENDING) {
+                    continue;
+                }
+                if (in_array($task->status, [PhoreSchedulerTask::PENDING, PhoreSchedulerTask::RUNNING, PhoreSchedulerTask::RETRY]))
+                    $numPending++;
+                if ($task->status === PhoreSchedulerTask::PENDING || $task->status === PhoreSchedulerTask::RETRY) {
                     if ($this->connector->lockTask($task)) {
                         $task->status = PhoreSchedulerTask::RUNNING;
-                        $task->startTime = time();
+                        $task->startTime = microtime(true);
                         $this->connector->updateTask($job, $task);
                         return [$job, $task];
                     }
+                }
+                if ($task->status === PhoreSchedulerTask::FAILED) {
+                    if($task->retryCount > 0 ) {
+                        $task->retryCount--;
+                        $task->status = PhoreSchedulerTask::RETRY;
+                        $numPending++;
+                        $task->startTime+=$task->retryInterval;
+                        $this->connector->updateTask($job, $task);
+                        continue;
+                    }
+                }
+                if ($task->startTime+$task->timeout<microtime(true)) {
+                    $task->status = PhoreSchedulerTask::FAILED;
+                    $this->connector->updateTask($job, $task);
                 }
             }
             if ($numPending === 0) {
@@ -110,19 +129,21 @@ class PhoreScheduler implements LoggerAwareInterface
 
     private function _failTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task, $message)
     {
-            $task->message = $message;
-            $task->status = PhoreSchedulerTask::FAILED;
-            $this->connector->updateTask($job, $task);
-            $this->connector->unlockTask($task);
+        $task->endTime = microtime(true);
+        $task->message = $message;
+        $task->status = PhoreSchedulerTask::FAILED;
+        $this->connector->updateTask($job, $task);
+        $this->connector->unlockTask($task);
     }
 
 
     private function _doneTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task, $message)
     {
-            $task->message = $message;
-            $task->status = PhoreSchedulerTask::OK;
-            $this->connector->updateTask($job, $task);
-            $this->connector->unlockTask($task);
+        $task->endTime = microtime(true);
+        $task->message = $message;
+        $task->status = PhoreSchedulerTask::OK;
+        $this->connector->updateTask($job, $task);
+        $this->connector->unlockTask($task);
     }
 
     public function runNext() : bool
@@ -159,7 +180,6 @@ class PhoreScheduler implements LoggerAwareInterface
             $task->startTime = microtime(true);
             $this->connector->updateTask($job, $task);
             $return = ($this->commands[$task->command])($task->arguments);
-            $task->endTime = microtime(true);
             $task->return = phore_serialize($return);
             $this->_doneTask($job, $task, "OK");
             $this->log->notice("Job successful");

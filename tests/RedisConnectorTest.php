@@ -29,9 +29,9 @@ class RedisConnectorTest extends TestCase
         $redis->connect("redis");
         $redis->flushAll();
 
-        $this->c = new PhoreSchedulerRedisConnector($redis);
+        //$this->c = new PhoreSchedulerRedisConnector($redis);
+        $this->c = new PhoreSchedulerRedisConnector("redis");
     }
-
 
     public function testJobIsCreated()
     {

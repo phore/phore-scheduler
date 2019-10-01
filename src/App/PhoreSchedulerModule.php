@@ -39,7 +39,7 @@ class PhoreSchedulerModule implements AppModule
         $app->addPage("{$this->startRoute}/scheduler/:jobId/:taskId", function (string $jobId, string $taskId, App $app) {
             $scheduler = $app->get($this->diName);
             if ( ! $scheduler instanceof PhoreScheduler)
-                throw new \InvalidArgumentException("{$this->diName} schould be from type PhoreScheduler");
+                throw new \InvalidArgumentException("{$this->diName} should be of type PhoreScheduler");
 
 
             $job = $scheduler->getJobInfo(null, $jobId)[0];

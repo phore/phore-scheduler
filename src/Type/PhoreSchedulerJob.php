@@ -23,7 +23,7 @@ class PhoreSchedulerJob
 
     public $jobId;
 
-    public $runAtTs = 0;
+    public $runAtTs;
 
     public $name;
 
@@ -32,6 +32,7 @@ class PhoreSchedulerJob
     public function __construct()
     {
         $this->jobId = uniqid();
+        $this->runAtTs = time();
     }
 
 }
