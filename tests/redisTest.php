@@ -2,11 +2,9 @@
 
 namespace Test;
 
-use Phore\Scheduler\Connector\PhoreSchedulerRedisConnector;
-use redisTest;
 use PHPUnit\Framework\TestCase;
 
-class redisUnitTest extends TestCase
+class redisTest extends TestCase
 {
     public function testRedis()
     {
