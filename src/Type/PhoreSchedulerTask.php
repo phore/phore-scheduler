@@ -16,8 +16,8 @@ namespace Phore\Scheduler\Type;
 class PhoreSchedulerTask
 {
 
-    const FAILED = "failed";
-    const OK = "ok";
+    const STATUS_FAILED = "failed";
+    const STATUS_OK = "ok";
 
     public $taskId;
 
@@ -49,7 +49,7 @@ class PhoreSchedulerTask
         $this->command = $command;
         $this->arguments = $arguments;
         $this->nRetries = $retries;
-        $this->timeout = $timeout;
+        $this->timeout = $timeout * 1000000;
     }
 
 }

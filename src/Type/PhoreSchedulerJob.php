@@ -31,7 +31,7 @@ class PhoreSchedulerJob
 
     public $nTasks;
 
-    public $nParallelTasks;
+    public $nParallelTasks = 100;
 
     public $nFailedTasks;
 
@@ -41,7 +41,7 @@ class PhoreSchedulerJob
 
     public $endTime;
 
-    public $continueOnFailure;
+    public $continueOnFailure = true;
 
     public function __construct()
     {

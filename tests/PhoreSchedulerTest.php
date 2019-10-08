@@ -54,12 +54,7 @@ class PhoreSchedulerTest extends TestCase
         $job->addTask("test", ["param1" => "val1"]);
         $job->save();
 
-
         $this->assertEquals(true, $s->runNext());
-        $this->assertEquals(1, count ($this->lastRuns));
-
-        $this->assertEquals(false, $s->runNext());
-        $this->assertEquals(1, count ($this->lastRuns));
 
     }
 
@@ -73,39 +68,15 @@ class PhoreSchedulerTest extends TestCase
         $job->addTask("fail", ["msg" => "task failed"], 3, 10);
         $job->save();
 
-        $this->assertEquals(true, $s->runNext()); //run job and set failed, return true
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(3, $task['retryCount']);
-        $this->assertEquals("failed", $task['status']);
-
         for($i=2; $i>=0; $i--) {
-            $this->assertEquals(false, $s->runNext()); //detect failure, set pending, return false
+            $this->assertEquals(true, $s->runNext());
             usleep($retryInterval);
-            $task = $s->getJobInfo()[0]['tasks'][0];
-            $this->assertEquals($i, $task['retryCount']);
-            $this->assertEquals("retry", $task['status']);
-
-            $this->assertEquals(true, $s->runNext()); //run job and set failed, return true
-            usleep($retryInterval);
-            $task = $s->getJobInfo()[0]['tasks'][0];
-            $this->assertEquals($i, $task['retryCount']);
-            $this->assertEquals("failed", $task['status']);
+            $pendingTasks = $s->getConnector()->getPendingTasks($job->getJob()->jobId);
+            $this->assertEquals($i, $pendingTasks[0]->nRetries);
         }
-
-        $this->assertEquals(false, $s->runNext()); //run job and set failed, return true
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(0, $task['retryCount']);
-        $this->assertEquals("failed", $task['status']);
-
-    }
-
-    public function testRunSuccessfulJob() {
-
-    }
-
-    public function testRunPartiallySuccessfulJob() {
+        $this->assertEquals(true, $s->runNext());
+        $finishedTasks = $s->getConnector()->getFinishedTasks($job->getJob()->jobId);
+        $this->assertEquals("failed", $finishedTasks[0]->status);
 
     }
 

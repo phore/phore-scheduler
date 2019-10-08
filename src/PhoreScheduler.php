@@ -133,13 +133,21 @@ class PhoreScheduler implements LoggerAwareInterface
     }
 
 
-    private function _failTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task, $message)
+    private function _failTask($jobId, PhoreSchedulerTask $task, $message)
     {
-        $task->endTime = microtime(true);
+        $task->endTime=microtime(true);
+        $task->status=PhoreSchedulerTask::STATUS_FAILED;
         $task->message = $message;
-        $task->status = PhoreSchedulerTask::FAILED;
-        $this->connector->updateTask($job, $task);
-        $this->connector->unlockTask($task);
+
+        $log['starttime'] = $task->startTime;
+        $log['runtime'] = $task->endTime - $task->startTime;
+        $log['endtime'] = $task->endTime;
+        $log['retriesLeft'] = $task->nRetries;
+        $log['errorMsg'] = $message.", ".$task->message;
+        $log['execHost'] = $task->execHost;
+        $log['execPid'] = $task->execPid;
+
+        $this->connector->updateTask($jobId, $task);
     }
 
 
@@ -152,50 +160,139 @@ class PhoreScheduler implements LoggerAwareInterface
         $this->connector->unlockTask($task);
     }
 
+    private function _forceJobFailure($jobId)
+    {
+        $this->connector->moveRunningJobToDone($jobId);
+        $job = $this->connector->getJobById($jobId);
+        $job->status=PhoreSchedulerJob::STATUS_FAILED;
+        $job->endTime=microtime(true);
+        $this->connector->updateJob($job);
+
+    }
+
+    /**
+     * @param $job PhoreSchedulerJob
+     * @throws \Exception
+     */
+    private function _cancelTasksOnTimeout(PhoreSchedulerJob $job)
+    {
+        foreach ($this->connector->yieldRunningTasks($job->jobId) as $task) {
+            if($task->startTime + $task->timeout > microtime(true)) {
+                $this->_rescheduleTask($job, $task, "timeout");
+            }
+        }
+    }
+
+    private function _rescheduleTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task, string $errorMsg) {
+        $task->endTime = microtime(true);
+        $log['starttime'] = $task->startTime;
+        $log['runtime'] = $task->endTime - $task->startTime;
+        $log['endtime'] = $task->endTime;
+        $log['retriesLeft'] = $task->nRetries;
+        $log['errorMsg'] = $errorMsg;
+        $log['execHost'] = $task->execHost;
+        $log['execPid'] = $task->execPid;
+
+        if($task->nRetries > 0) {
+            $this->connector->moveRunningTaskToPending($job->jobId, $task->taskId);
+            $task->nRetries--;
+            $log['status'] = "retry";
+        } else {
+            $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
+            $task->status = PhoreSchedulerTask::STATUS_FAILED;
+            $log['status'] = $task->status;
+        }
+        $this->connector->updateTask($job->jobId, $task);
+        $this->connector->addTaskLog($job->jobId, $task->taskId, $log);
+
+        if(!$job->continueOnFailure) {
+            $this->_forceJobFailure($job->jobId);
+            return;
+        }
+    }
+
+    private function _runNextTask(PhoreSchedulerJob $job)
+    {
+        $task = $this->connector->getFirstPendingTask($job->jobId);
+        if($task === null) {
+            return;
+        }
+        if(!$this->connector->addTaskToRunning($job->jobId, $task->taskId))
+            return;
+
+        $task->execHost = gethostname();
+        $task->execPid = getmypid();
+        $task->startTime = microtime(true);
+        $this->connector->updateTask($job->jobId, $task);
+
+        if(!$this->connector->removeTaskFromPending($job->jobId, $task->taskId))
+            throw new \Exception("Failed to remove pending task after copying to run.");
+
+        try {
+            $return = ($task->command)($task->arguments);
+            $task->endTime = microtime(true);
+            $task->return = phore_serialize($return);
+            $task->status = PhoreSchedulerTask::STATUS_OK;
+            $this->connector->updateTask($job->jobId, $task);
+
+            $log['status'] = $task->status;
+            $log['starttime'] = $task->startTime;
+            $log['runtime'] = $task->endTime - $task->startTime;
+            $log['endtime'] = $task->endTime;
+            $log['retriesLeft'] = $task->nRetries;
+            $log['message'] = $task->message;
+            $log['return'] = $task->return;
+            $log['execHost'] = $task->execHost;
+            $log['execPid'] = $task->execPid;
+            $this->connector->addTaskLog($job->jobId, $task->taskId, $log);
+        } catch (\Error $e) {
+            $errorMsg = "Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString();
+            $this->log->alert($errorMsg);
+            $this->_rescheduleTask($job, $task, $errorMsg);
+            return false;
+        } catch (\Exception $ex) {
+            $errorMsg = "Job failed with exception: {$ex->getMessage()}\n\n" . $ex->getTraceAsString();
+            $this->log->alert($errorMsg);
+            $this->_rescheduleTask($job, $task, $errorMsg);
+            return false;
+        }
+
+        return true;
+
+    }
+
     public function runNext() : bool
     {
         $this->log->debug("scanning for new tasks");
         
         if ( ! $this->connector->isConnected())
             $this->connector->connect();
-        
-        $nextTask = $this->_getNextTask();
-        if ($nextTask === null) {
-            $this->log->debug("no new tasks to be processed");
+
+        //move pending job to queue
+        $this->connector->moveRandomPendingJobToRunningQueue();
+        //get random running job or return when no jobs available
+        $jobId = $this->connector->getRandomRunningJob();
+        if($jobId === false) {
             return false;
         }
-        [$job, $task] = $nextTask;
-        /* @var $job PhoreSchedulerJob */
-        /* @var $task PhoreSchedulerTask */
+        $job = $this->connector->getJobById($jobId);
 
-        if ( ! isset($this->commands[$task->command])) {
-            $this->log->alert("Job: :jobName Task: :taskId Command :command undefined", [
-                "jobName" => $job->jobName,
-                "taskId" => $task->taskId,
-                "command" => $task->command
-            ]);
-            $this->_failTask($job, $task, "command undefine: '{$task->command}'");
+        $this->_cancelTasksOnTimeout($job);
+
+        if($this->connector->countRunningTasks($jobId) >= $job->nParallelTasks) {
+            return true;
         }
 
-        try {
-            $this->log->notice("running task :taskId (Command: :command)", [
-                "taskId" => $task->taskId,
-                "command" => $task->command,
-                "arguments" => phore_json_encode($task->arguments)
-            ]);
-            $task->startTime = microtime(true);
-            $this->connector->updateTask($job, $task);
-            $return = ($this->commands[$task->command])($task->arguments);
-            $task->return = phore_serialize($return);
-            $this->_doneTask($job, $task, "OK");
-            $this->log->notice("Job successful");
-        } catch (\Error $e) {
-            $this->log->alert("Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString());
-            $this->_failTask($job, $task, "Error: " . $e->getMessage() . "\n\n" . $e->getTraceAsString());
-        } catch (\Exception $ex) {
-            $this->log->alert("Job failed with exception: {$ex->getMessage()}\n\n" . $ex->getTraceAsString());
-            $this->_failTask($job, $task, "Exception: " . $ex->getMessage() . "\n\n" . $ex->getTraceAsString());
+        if(!$this->_runNextTask($job)) {
+            return true;
         }
+
+        if($this->connector->countRunningTasks($jobId) > 0 && $this->connector->countPendingTasks() > 0) {
+            return true;
+        }
+
+        $this->connector->moveRunningJobToDone($jobId);
+
         return true;
     }
 
@@ -204,10 +301,10 @@ class PhoreScheduler implements LoggerAwareInterface
         while(true) {
             $this->log->notice("Starting in background mode.");
             try {
-                                
-                if (!$this->runNext()) {
-                    sleep(1);
-                }
+                $this->runNext();
+//                if (!$this->runNext()) {
+//                    sleep(1);
+//                }
             } catch (\Exception $e) {
                 $this->log->alert("Exception running scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
                 sleep(10);
