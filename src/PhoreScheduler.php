@@ -21,7 +21,7 @@ class PhoreScheduler implements LoggerAwareInterface
      */
     private $connector;
 
-    protected $commands = [];
+    //protected $commands = [];
 
     /**
      * @var NullLogger
@@ -48,19 +48,12 @@ class PhoreScheduler implements LoggerAwareInterface
         return $this;
     }
 
-
-    public function defineCommand(string $name, callable $fn) : self
-    {
-        $this->commands[$name] = $fn;
-        return $this;
-    }
-
     public function _createJob(PhoreSchedulerJob $job, array $tasks)
     {
-        $job->status = PhoreSchedulerJob::STATUS_PENDING;
+        //$job->status = PhoreSchedulerJob::STATUS_PENDING;
 
         foreach ($tasks as $task) {
-            $task->status = PhoreSchedulerJob::STATUS_PENDING;
+            //$task->status = PhoreSchedulerJob::STATUS_PENDING;
             $this->connector->addTask($job, $task);
         }
         $this->connector->addJob($job);
@@ -72,6 +65,19 @@ class PhoreScheduler implements LoggerAwareInterface
         $job->name = $jobName;
         return new PhoreSchedulerJobAccessor($this, $job);
     }
+
+
+
+
+
+
+    public function defineCommand(string $name, callable $fn) : self
+    {
+        $this->commands[$name] = $fn;
+        return $this;
+    }
+
+
 
 
     private function _getNextTask() : ?array

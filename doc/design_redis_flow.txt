@@ -1,0 +1,102 @@
+runNext() {
+
+1   //check for pending jobs
+    $jobID = sRandMember(jobs_pending);
+    if($jobID === false) {
+        return;
+    }
+    $job = getJobById($jobID);
+    if($job->scheduledTimestamp > time()) {
+        return;
+    }
+    if(sMove(jobs_pending, jobs_running, $jobID) === true) {
+        $job->stats_startTs=microtime(true);
+        updateJob($job);
+    }
+
+2   //check for running jobs
+    $jobID = sRandMember(jobs_running);
+    if($jobID === false) {
+        return;
+    }
+
+3   //cancel timed out tasks
+    foreach(getRunningTasks($jobID) as $taskId) {
+        $task = getTaskById($jobID, $taskId);
+        if($task->startTs+$task->maxDuration < microtime(true))
+            continue;
+        rescheduleTask($jobID, $taskID, "timeout");
+
+    }
+
+
+3   //assign task
+    $job = getJob($jobID)
+    if(sCard(tasks_running) >= $job->parallel_tasks) {
+        return;
+    }
+    $taskID = lIndex(tasks_pending, 0);
+    if($taskID === false) {
+        return
+    }
+    if(sAdd(tasks_running, taskID) === false ) {
+        return;
+    }
+    if(lRemove(tasks_pending, taskID) === false ) {
+        throw exception
+    }
+
+4   //run task
+    $task = getTaskById($taskID);
+    $task->execHost = host;
+    $task->execPid = pid;
+    $task->startTs = microtime(true);
+    updateTask($task);
+
+    try {
+        $task->return = (command)(arguments);
+        $task->endTs = microtime(true);
+        updateTask($task);
+        //TODO: update stats
+    } catch {
+        rescheduleTask();
+    }
+
+    if($task->execute() === false) {
+        if($task->retries > 0) {
+            rescheduleTask($jobID, $taskID, errorMsg);
+            return;
+        }
+        $task->status=FAIL;
+        if(!$job->continue_on_fail) {
+            _failJob($jobID);
+        }
+    }
+    sMove(tasks_running, tasks_done, $taskID);
+
+5   //check if job is finished
+    if(sCard(tasks_running) > 0 && sCard(tasks_pending)  > 0) {
+        return;
+    }
+    sMove(jobs_running, jobs_done, $jobID);
+    //update stats
+
+
+function rescheduleTask($jobID, $taskID, errorMsg) {
+    if($task->retries < 1) {
+        return;
+    }
+    $task->retries--;
+    //TODO: update stats + log
+    if(rPush(tasks_pending, $taskID) === false) {
+        return;
+    }
+    if(sRem(tasks_running, $taskID) !== 1) {
+        throw exception
+    }
+}
+
+function $task->execute() {
+
+
+    }

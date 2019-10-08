@@ -16,13 +16,8 @@ namespace Phore\Scheduler\Type;
 class PhoreSchedulerTask
 {
 
-    const PENDING = "pending";
-    const TEMPFAIL = "tempfail";
     const FAILED = "failed";
-    const RETRY = "retry";
-    const RUNNING = "running";
     const OK = "ok";
-
 
     public $taskId;
 
@@ -32,9 +27,7 @@ class PhoreSchedulerTask
 
     public $status;
 
-    public $retryCount;
-
-    public $retryInterval;
+    public $nRetries;
 
     public $timeout;
 
@@ -46,11 +39,16 @@ class PhoreSchedulerTask
 
     public $endTime;
 
-    public function __construct($retries = 3, $retryInterval = 60, $timeout = 600)
+    public $execHost;
+
+    public $execPid;
+
+    public function __construct($command, $arguments = [], $retries = 3, $timeout = 600)
     {
         $this->taskId = uniqid();
-        $this->retryCount = $retries;
-        $this->retryInterval = $retryInterval;
+        $this->command = $command;
+        $this->arguments = $arguments;
+        $this->nRetries = $retries;
         $this->timeout = $timeout;
     }
 

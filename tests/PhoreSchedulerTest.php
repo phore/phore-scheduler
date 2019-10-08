@@ -70,7 +70,7 @@ class PhoreSchedulerTest extends TestCase
         $retryInterval = 1000; // in uSeconds
 
         $job = $s->createJob("test1");
-        $job->addTask("fail", ["msg" => "task failed"], 3, $retryInterval/1000000, 10);
+        $job->addTask("fail", ["msg" => "task failed"], 3, 10);
         $job->save();
 
         $this->assertEquals(true, $s->runNext()); //run job and set failed, return true
@@ -79,41 +79,19 @@ class PhoreSchedulerTest extends TestCase
         $this->assertEquals(3, $task['retryCount']);
         $this->assertEquals("failed", $task['status']);
 
-        $this->assertEquals(false, $s->runNext()); //detect failure, set pending, return false
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(2, $task['retryCount']);
-        $this->assertEquals("retry", $task['status']);
+        for($i=2; $i>=0; $i--) {
+            $this->assertEquals(false, $s->runNext()); //detect failure, set pending, return false
+            usleep($retryInterval);
+            $task = $s->getJobInfo()[0]['tasks'][0];
+            $this->assertEquals($i, $task['retryCount']);
+            $this->assertEquals("retry", $task['status']);
 
-        $this->assertEquals(true, $s->runNext()); //run job and set failed, return true
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(2, $task['retryCount']);
-        $this->assertEquals("failed", $task['status']);
-
-        $this->assertEquals(false, $s->runNext()); //detect failure, set pending, return false
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(1, $task['retryCount']);
-        $this->assertEquals("retry", $task['status']);
-
-        $this->assertEquals(true, $s->runNext()); //run job and set failed, return true
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(1, $task['retryCount']);
-        $this->assertEquals("failed", $task['status']);
-
-        $this->assertEquals(false, $s->runNext()); //detect failure, set pending, return false
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(0, $task['retryCount']);
-        $this->assertEquals("retry", $task['status']);
-
-        $this->assertEquals(true, $s->runNext()); //run job and set failed, return true
-        usleep($retryInterval);
-        $task = $s->getJobInfo()[0]['tasks'][0];
-        $this->assertEquals(0, $task['retryCount']);
-        $this->assertEquals("failed", $task['status']);
+            $this->assertEquals(true, $s->runNext()); //run job and set failed, return true
+            usleep($retryInterval);
+            $task = $s->getJobInfo()[0]['tasks'][0];
+            $this->assertEquals($i, $task['retryCount']);
+            $this->assertEquals("failed", $task['status']);
+        }
 
         $this->assertEquals(false, $s->runNext()); //run job and set failed, return true
         usleep($retryInterval);
@@ -122,5 +100,14 @@ class PhoreSchedulerTest extends TestCase
         $this->assertEquals("failed", $task['status']);
 
     }
+
+    public function testRunSuccessfulJob() {
+
+    }
+
+    public function testRunPartiallySuccessfulJob() {
+
+    }
+
 
 }

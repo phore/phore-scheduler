@@ -16,8 +16,8 @@ namespace Phore\Scheduler\Type;
 class PhoreSchedulerJob
 {
 
-    const STATUS_PENDING = "pending";
-    const STATUS_RUNNING = "running";
+//    const STATUS_PENDING = "pending";
+//    const STATUS_RUNNING = "running";
     const STATUS_FAILED = "failed";
     const STATUS_OK = "ok";
 
@@ -29,10 +29,24 @@ class PhoreSchedulerJob
 
     public $status;
 
+    public $nTasks;
+
+    public $nParallelTasks;
+
+    public $nFailedTasks;
+
+    public $nSuccessfulTasks;
+
+    public $startTime;
+
+    public $endTime;
+
+    public $continueOnFailure;
+
     public function __construct()
     {
         $this->jobId = uniqid();
-        $this->runAtTs = time();
+        $this->runAtTs = microtime(true);
     }
 
 }

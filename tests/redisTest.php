@@ -23,4 +23,5 @@ class redisTest extends TestCase
         $this->assertEquals("val3", $result);
 
     }
+
 }
