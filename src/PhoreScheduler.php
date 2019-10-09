@@ -33,8 +33,6 @@ class PhoreScheduler implements LoggerAwareInterface
         $this->log = new NullLogger();
     }
 
-
-
     public function getConnector() : PhoreSchedulerRedisConnector
     {
         return $this->connector;
@@ -48,10 +46,7 @@ class PhoreScheduler implements LoggerAwareInterface
 
     public function _createJob(PhoreSchedulerJob $job, array $tasks)
     {
-        //$job->status = PhoreSchedulerJob::STATUS_PENDING;
-
         foreach ($tasks as $task) {
-            //$task->status = PhoreSchedulerJob::STATUS_PENDING;
             $this->connector->addTask($job, $task);
         }
         $this->connector->addJob($job);
@@ -64,108 +59,10 @@ class PhoreScheduler implements LoggerAwareInterface
         return new PhoreSchedulerJobAccessor($this, $job);
     }
 
-
-
-
-
-
     public function defineCommand(string $name, callable $fn) : self
     {
         $this->commands[$name] = $fn;
         return $this;
-    }
-
-
-
-
-    private function _getNextTask() : ?array
-    {
-        $jobs = $this->connector->listJobs();
-        foreach ($jobs as $job) {
-            if ($job->status === PhoreSchedulerJob::STATUS_PENDING) {
-                if ($job->runAtTs <= time()) {
-                    $job->status = PhoreSchedulerJob::STATUS_RUNNING;
-                    $this->connector->updateJob($job);
-                }
-            }
-            if ($job->status !== PhoreSchedulerJob::STATUS_RUNNING)
-                continue;
-            $numPending = 0;
-            foreach ($this->connector->listTasks($job) as $task) {
-                if ($task->startTime > microtime(true)) {
-                    // skip retries until retryInterval reached, but note as pending
-                    $numPending++;
-                    continue;
-                }
-                if (in_array($task->status, [PhoreSchedulerTask::PENDING, PhoreSchedulerTask::RUNNING, PhoreSchedulerTask::RETRY]))
-                    $numPending++;
-                if ($task->status === PhoreSchedulerTask::PENDING || $task->status === PhoreSchedulerTask::RETRY) {
-                    if ($this->connector->lockTask($task)) {
-                        $task->status = PhoreSchedulerTask::RUNNING;
-                        $task->startTime = microtime(true);
-                        $this->connector->updateTask($job, $task);
-                        return [$job, $task];
-                    }
-                }
-                if ($task->status === PhoreSchedulerTask::FAILED) {
-                    if($task->retryCount > 0 ) {
-                        $task->retryCount--;
-                        $task->status = PhoreSchedulerTask::RETRY;
-                        $numPending++;
-                        $task->startTime+=$task->retryInterval;
-                        $this->connector->updateTask($job, $task);
-                        continue;
-                    }
-                }
-                if ($task->startTime+$task->timeout<microtime(true)) {
-                    $task->status = PhoreSchedulerTask::FAILED;
-                    $this->connector->updateTask($job, $task);
-                }
-            }
-            if ($numPending === 0) {
-                $job->status = PhoreSchedulerJob::STATUS_OK;
-                $this->connector->updateJob($job);
-            }
-        }
-        return null; // No pending tasks
-    }
-
-
-    private function _failTask($jobId, PhoreSchedulerTask $task, $message)
-    {
-        $task->endTime=microtime(true);
-        $task->status=PhoreSchedulerTask::STATUS_FAILED;
-        $task->message = $message;
-
-        $log['starttime'] = $task->startTime;
-        $log['runtime'] = $task->endTime - $task->startTime;
-        $log['endtime'] = $task->endTime;
-        $log['retriesLeft'] = $task->nRetries;
-        $log['errorMsg'] = $message.", ".$task->message;
-        $log['execHost'] = $task->execHost;
-        $log['execPid'] = $task->execPid;
-
-        $this->connector->updateTask($jobId, $task);
-    }
-
-
-    private function _doneTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task, $message)
-    {
-        $task->endTime = microtime(true);
-        $task->message = $message;
-        $task->status = PhoreSchedulerTask::OK;
-        $this->connector->updateTask($job, $task);
-        $this->connector->unlockTask($task);
-    }
-
-    private function _forceJobFailure($jobId)
-    {
-        $this->connector->moveRunningJobToDone($jobId);
-        $job = $this->connector->getJobById($jobId);
-        $job->status=PhoreSchedulerJob::STATUS_FAILED;
-        $job->endTime=microtime(true);
-        $this->connector->updateJob($job);
-
     }
 
     /**
@@ -183,13 +80,7 @@ class PhoreScheduler implements LoggerAwareInterface
 
     private function _rescheduleTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task, string $errorMsg) {
         $task->endTime = microtime(true);
-        $log['starttime'] = $task->startTime;
-        $log['runtime'] = $task->endTime - $task->startTime;
-        $log['endtime'] = $task->endTime;
-        $log['retriesLeft'] = $task->nRetries;
-        $log['errorMsg'] = $errorMsg;
-        $log['execHost'] = $task->execHost;
-        $log['execPid'] = $task->execPid;
+        $task->message .= $errorMsg;
 
         if($task->nRetries > 0) {
             $this->connector->moveRunningTaskToPending($job->jobId, $task->taskId);
@@ -197,12 +88,15 @@ class PhoreScheduler implements LoggerAwareInterface
         } else {
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
             $task->status = PhoreSchedulerTask::STATUS_FAILED;
+            $job->status = PhoreSchedulerJob::STATUS_FAILED;
+            $this->connector->updateJob($job);
         }
         $this->connector->updateTask($job->jobId, $task);
 
         if(!$job->continueOnFailure) {
-            $this->_forceJobFailure($job->jobId);
-            return;
+            $this->connector->moveRunningJobToDone($job->jobId);
+            $job->endTime = microtime(true);
+            $this->connector->updateJob($job);
         }
     }
 
@@ -252,9 +146,14 @@ class PhoreScheduler implements LoggerAwareInterface
         if ( ! $this->connector->isConnected())
             $this->connector->connect();
 
-        //move pending job to queue
-        $this->connector->moveRandomPendingJobToRunningQueue();
-        //get random running job or return when no jobs available
+        foreach ($this->connector->yieldPendingJobs() as $job) {
+            if($job->runAtTs <= microtime(true) && $this->connector->movePendingJobToRunningQueue($job->jobId)) {
+                $job->startTime = microtime(true);
+                $this->connector->updateJob($job);
+                break;
+            }
+        }
+
         $jobId = $this->connector->getRandomRunningJob();
         if($jobId === false) {
             return false;
@@ -276,6 +175,11 @@ class PhoreScheduler implements LoggerAwareInterface
         }
 
         $this->connector->moveRunningJobToDone($jobId);
+        if($job->status !== PhoreSchedulerJob::STATUS_FAILED) {
+            $job->status = PhoreSchedulerJob::STATUS_OK;
+        }
+        $job->endTime = microtime(true);
+        $this->connector->updateJob($job);
 
         return true;
     }
@@ -295,57 +199,6 @@ class PhoreScheduler implements LoggerAwareInterface
             }
         }
     }
-
-
-
-
-    public function getJobInfo(string $filterStatus=null, string $jobId=null) : array
-    {
-        $ret = [];
-
-        foreach ($this->connector->listJobs() as $job) {
-
-            if ($filterStatus !== null && $job->status !== $filterStatus) {
-                continue;
-            }
-            if ($jobId !== null && $jobId !== $job->jobId)
-                continue;
-
-            $curJobInfo = (array)$job;
-            $tasks = $this->connector->listTasks($job);
-            $curJobInfo["tasks"] = [];
-
-            $curJobInfo["tasks_all"] = 0;
-            $curJobInfo["tasks_pending"] = 0;
-            $curJobInfo["tasks_running"] = 0;
-            $curJobInfo["tasks_ok"] = 0;
-            $curJobInfo["tasks_failed"] = 0;
-
-            foreach ($tasks as $task) {
-                $curJobInfo["tasks"][] = (array)$task;
-                $curJobInfo["tasks_all"]++;
-                switch ($task->status) {
-                    case $task::RUNNING:
-                        $curJobInfo["tasks_running"]++;
-                        break;
-                    case $task::PENDING:
-                        $curJobInfo["tasks_pending"]++;
-                        break;
-                    case $task::OK:
-                        $curJobInfo["tasks_ok"]++;
-                        break;
-                    case $task::FAILED:
-                        $curJobInfo["tasks_failed"]++;
-                        break;
-                }
-            }
-            $ret[] = $curJobInfo;
-        }
-        return $ret;
-    }
-
-
-
 
     private static $instance = null;
 

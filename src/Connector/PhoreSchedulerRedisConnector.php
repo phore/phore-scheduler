@@ -21,8 +21,6 @@ class PhoreSchedulerRedisConnector
     private $redis;
     private $redisHost;
 
-    private $prefix;
-
     private $connectWasCalled = false;
 
     const JOBS_PENDING = "jobs_pending";
@@ -32,11 +30,10 @@ class PhoreSchedulerRedisConnector
     const TASKS_RUNNING = "_tasks_running";
     const TASKS_DONE = "_tasks_done";
 
-    public function __construct(string $redis_host, $prefix="PhoreScheduler")
+    public function __construct(string $redis_host)
     {
         $this->redis = new \Redis();
-        $this->redisHost = $redis_host;            
-        //$this->prefix = $prefix;
+        $this->redisHost = $redis_host;
     }
 
 
@@ -57,7 +54,7 @@ class PhoreSchedulerRedisConnector
         $this->connectWasCalled = true;
     }
 
-    private function ensureConnection()
+    private function ensureConnectionCalled()
     {
         if ( ! $this->connectWasCalled)
             $this->connect();
@@ -75,67 +72,67 @@ class PhoreSchedulerRedisConnector
     
     public function addJob(PhoreSchedulerJob $job)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $this->redis->set($job->jobId, phore_serialize($job));
         $this->redis->sAdd(self::JOBS_PENDING, $job->jobId);
     }
 
     public function updateJob(PhoreSchedulerJob $job)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $this->redis->set($job->jobId, phore_serialize($job));
     }
 
-    public function getJobById($jobId) : PhoreSchedulerJob
+    public function getJobById($jobId) : ?PhoreSchedulerJob
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $job = phore_unserialize($this->redis->get($jobId), [PhoreSchedulerJob::class]);
         return ($job === false) ? null : $job;
     }
 
-    public function moveRandomPendingJobToRunningQueue()
-    {
-        $this->ensureConnection();
-        $jobId = $this->redis->sRandMember(self::JOBS_PENDING);
-        if ($jobId !== false) {
-            return $this->redis->sMove(self::JOBS_PENDING, self::JOBS_RUNNING, $jobId);
+    /**
+     * @return \Generator|PhoreSchedulerJob[]
+     */
+    public function yieldPendingJobs() {
+        $this->ensureConnectionCalled();
+        foreach ($this->redis->sMembers(self::JOBS_PENDING) as $jobId) {
+            yield $this->getJobById($jobId);
         }
-        return false;
     }
 
-    public function movePendingJobToRunningQueue($jobId)
+    public function movePendingJobToRunningQueue($jobId) : bool
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->sMove(self::JOBS_PENDING, self::JOBS_RUNNING, $jobId);
     }
 
     public function moveRunningJobToDone($jobId)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->sMove(self::JOBS_RUNNING, self::JOBS_DONE, $jobId);
     }
 
     public function getRandomRunningJob()
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->sRandMember(self::JOBS_RUNNING);
     }
 
     public function getFinishedJobs()
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->getJobList(self::JOBS_DONE);
     }
 
     public function getPendingJobs()
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->getJobList(self::JOBS_PENDING);
     }
 
     public function getRunnningJobs()
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->getJobList(self::JOBS_RUNNING);
     }
 
@@ -149,32 +146,9 @@ class PhoreSchedulerRedisConnector
     }
 
 
-
-    /**
-     *
-     * @return PhoreSchedulerJob[]
-     */
-    public function listJobs () : array
-    {
-        if ( ! $this->connectWasCalled)
-            $this->connect();
-        $jobs = [];
-        foreach ($this->redis->lRange($this->prefix . "_jobs", 0, -1) as $jobId) {
-            $jobData = $this->redis->get($this->prefix . "_job_" . $jobId);
-            if ($jobData === false) {
-                // Remove Missing Jobs from List
-                $this->redis->lRem($this->prefix . "_jobs", $jobId, 1);
-                continue;
-            }
-            $jobs[] = phore_unserialize($jobData, [PhoreSchedulerJob::class]);
-        }
-        return $jobs;
-    }
-
-
     public function addTask(PhoreSchedulerJob $job, PhoreSchedulerTask $task)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $this->redis->set($job->jobId ."_". $task->taskId, phore_serialize($task));
         $this->redis->lPush($job->jobId . self::TASKS_PENDING, $task->taskId);
     }
@@ -182,7 +156,7 @@ class PhoreSchedulerRedisConnector
 
     public function updateTask($jobId, PhoreSchedulerTask $task)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $taskString = phore_serialize($task);
         $log = microtime(true) . "_" .  $taskString;
         $this->redis->sAdd($jobId ."_". $task->taskId . "_log", $log);
@@ -191,32 +165,32 @@ class PhoreSchedulerRedisConnector
 
     public function getTaskById($jobId, $taskId) : PhoreSchedulerTask
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $task = phore_unserialize($this->redis->get($jobId ."_". $taskId), [PhoreSchedulerTask::class]);
         return ($task === false) ? null : $task;
     }
 
     public function countPendingTasks($jobId)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->lLen($jobId . self::TASKS_RUNNING);
     }
 
     public function countRunningTasks($jobId)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->sCard($jobId . self::TASKS_RUNNING);
     }
 
     public function getFirstPendingTaskId($jobId)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->lIndex($jobId . self::TASKS_PENDING, -1);
     }
 
     public function getFirstPendingTask($jobId) : ?PhoreSchedulerTask
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $taskId = $this->redis->lIndex($jobId . self::TASKS_PENDING, -1);
         if($taskId === false)
             return null;
@@ -225,25 +199,25 @@ class PhoreSchedulerRedisConnector
 
     public function addTaskToRunning($jobId, $taskId)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->sAdd($jobId . self::TASKS_RUNNING, $taskId);
     }
 
     public function removeTaskFromPending($jobId, $taskId)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->lRem($jobId . self::TASKS_PENDING, $taskId, 0);
     }
 
     public function moveRunningTaskToDone($jobId, $taskId) : bool
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         return $this->redis->sMove($jobId . self::TASKS_RUNNING, $jobId . self::TASKS_DONE, $taskId);
     }
 
     public function getPendingTasks($jobId) : array
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $tasks = [];
         foreach ($this->redis->lRange($jobId . self::TASKS_PENDING, 0, -1) as $taskId) {
             $tasks[] = $this->getTaskById($jobId, $taskId);
@@ -253,7 +227,7 @@ class PhoreSchedulerRedisConnector
 
     public function getFinishedTasks($jobId) : array
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         $tasks = [];
         foreach ($this->redis->sMembers($jobId . self::TASKS_DONE) as $taskId) {
             $tasks[] = $this->getTaskById($jobId, $taskId);
@@ -267,7 +241,7 @@ class PhoreSchedulerRedisConnector
      */
     public function yieldRunningTasks($jobId)
     {
-        $this->ensureConnection();
+        $this->ensureConnectionCalled();
         foreach ($this->redis->sMembers($jobId . self::TASKS_RUNNING) as $taskId) {
             yield $this->getTaskById($jobId, $taskId);
         }
@@ -282,69 +256,4 @@ class PhoreSchedulerRedisConnector
             throw new \Exception("failed to remove running task.");
         }
     }
-
-
-
-    /**
-     * @param PhoreSchedulerJob $job
-     * @param null $filter
-     * @return PhoreSchedulerTask[]
-     */
-    public function listTasks(PhoreSchedulerJob $job, $filter=null)
-    {
-        if ( ! $this->connectWasCalled)
-            $this->connect();
-        $tasks = [];
-        $taskIds = $this->redis->lRange($this->prefix . "_job_{$job->jobId}_tasks", 0, -1);
-        foreach ($taskIds as $taskId) {
-            $taskData = $this->redis->get($this->prefix . "_job_{$job->jobId}_task_{$taskId}");
-            if ($taskData === false) {
-                $this->redis->lRem($this->prefix . "_job_{$job->jobId}_tasks", $taskId, 1);
-                continue;
-            }
-            $tasks[] = unserialize($taskData, [PhoreSchedulerTask::class]);
-        }
-        return $tasks;
-    }
-
-
-    public function rmTask(PhoreSchedulerJob $job, $taskId)
-    {
-        if ( ! $this->connectWasCalled)
-            $this->connect();
-        $this->redis->delete($this->prefix . "_job_{$job->jobId}_tasks", $taskId);
-        $this->redis->lRem($this->prefix . "_job_{$job->jobId}_tasks", $taskId, 1);
-    }
-
-    /**
-     *
-     * Return:
-     *
-     * true     If lock was set successful
-     * fals     Aleady locked
-     *
-     * @param PhoreSchedulerTask $task
-     * @return bool
-     */
-    public function lockTask(PhoreSchedulerTask $task) : bool
-    {
-        if ( ! $this->connectWasCalled)
-            $this->connect();
-        return $this->redis->sAdd($this->prefix . "_locked_tasks", $task->taskId);
-    }
-
-    public function lockRescheduleTask(PhoreSchedulerTask $task) : bool
-    {
-        if ( ! $this->connectWasCalled)
-            $this->connect();
-        return $this->redis->sAdd($this->prefix . "_locked_rescheduled_tasks", $task->taskId);
-    }
-
-    public function unlockTask(PhoreSchedulerTask $task)
-    {
-        if ( ! $this->connectWasCalled)
-            $this->connect();
-        $this->redis->sRem($this->prefix . "_locked_tasks", $task->taskId);
-    }
-
 }

@@ -33,7 +33,6 @@ class PhoreSchedulerTest extends TestCase
 
         $this->lastRuns = [];
 
-        //$this->s = new PhoreScheduler(new PhoreSchedulerRedisConnector($redis));
         $this->s = new PhoreScheduler(new PhoreSchedulerRedisConnector("redis"));
         $this->s->defineCommand("test", function (array $arguments) {
              $this->lastRuns[] = ["test", $arguments];
