@@ -21,6 +21,8 @@ class PhoreScheduler implements LoggerAwareInterface
      */
     private $connector;
 
+    private $commands = [];
+
     /**
      * @var NullLogger
      */
@@ -72,7 +74,7 @@ class PhoreScheduler implements LoggerAwareInterface
     private function _cancelTasksOnTimeout(PhoreSchedulerJob $job)
     {
         foreach ($this->connector->yieldRunningTasks($job->jobId) as $task) {
-            if($task->startTime + $task->timeout > microtime(true)) {
+            if($task->startTime + $task->timeout < microtime(true)) {
                 $this->_rescheduleTask($job, $task, "timeout");
             }
         }
@@ -118,21 +120,22 @@ class PhoreScheduler implements LoggerAwareInterface
             throw new \Exception("Failed to remove pending task after copying to run.");
 
         try {
-            $return = ($task->command)($task->arguments);
+            $return = ($this->commands[$task->command])($task->arguments);
             $task->endTime = microtime(true);
             $task->return = phore_serialize($return);
             $task->status = PhoreSchedulerTask::STATUS_OK;
             $this->connector->updateTask($job->jobId, $task);
+            $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
         } catch (\Error $e) {
             $errorMsg = "Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString();
             $this->log->alert($errorMsg);
             $this->_rescheduleTask($job, $task, $errorMsg);
-            return false;
+            return true;
         } catch (\Exception $ex) {
             $errorMsg = "Job failed with exception: {$ex->getMessage()}\n\n" . $ex->getTraceAsString();
             $this->log->alert($errorMsg);
             $this->_rescheduleTask($job, $task, $errorMsg);
-            return false;
+            return true;
         }
 
         return true;
@@ -154,7 +157,7 @@ class PhoreScheduler implements LoggerAwareInterface
             }
         }
 
-        $jobId = $this->connector->getRandomRunningJob();
+        $jobId = $this->connector->getRandomRunningJobId();
         if($jobId === false) {
             return false;
         }
@@ -170,7 +173,11 @@ class PhoreScheduler implements LoggerAwareInterface
             return true;
         }
 
-        if($this->connector->countRunningTasks($jobId) > 0 && $this->connector->countPendingTasks() > 0) {
+        $nRun = $this->connector->countRunningTasks($jobId);
+        $nPending = $this->connector->countPendingTasks($jobId);
+        $nFinished = $this->connector->countFinishedTasks($jobId);
+
+        if($this->connector->countRunningTasks($jobId) > 0 || $this->connector->countPendingTasks($jobId) > 0) {
             return true;
         }
 

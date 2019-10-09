@@ -56,7 +56,7 @@ class RedisConnectorTest extends TestCase
         $job = new PhoreSchedulerJob();
         $this->c->addJob($job);
         $this->c->movePendingJobToRunningQueue($job->jobId);
-        $result = $this->c->getRandomRunningJob();
+        $result = $this->c->getRandomRunningJobId();
         $this->assertEquals($job->jobId, $result);
         $this->c->moveRunningJobToDone($job->jobId);
         $result = $this->c->getFinishedJobs();

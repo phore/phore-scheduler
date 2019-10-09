@@ -55,7 +55,7 @@ class PhoreSchedulerJobAccessor
     }
 
     /**
-     * @return array
+     * @return PhoreSchedulerTask[]
      */
     public function getTasks(): array
     {

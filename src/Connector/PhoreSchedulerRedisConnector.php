@@ -100,6 +100,21 @@ class PhoreSchedulerRedisConnector
         }
     }
 
+    public function countPendingJobs() {
+        $this->ensureConnectionCalled();
+        return $this->redis->sCard(self::JOBS_PENDING);
+    }
+
+    public function countRunningJobs() {
+        $this->ensureConnectionCalled();
+        return $this->redis->sCard(self::JOBS_RUNNING);
+    }
+
+    public function countFinishedJobs() {
+        $this->ensureConnectionCalled();
+        return $this->redis->sCard(self::JOBS_DONE);
+    }
+
     public function movePendingJobToRunningQueue($jobId) : bool
     {
         $this->ensureConnectionCalled();
@@ -112,7 +127,7 @@ class PhoreSchedulerRedisConnector
         return $this->redis->sMove(self::JOBS_RUNNING, self::JOBS_DONE, $jobId);
     }
 
-    public function getRandomRunningJob()
+    public function getRandomRunningJobId()
     {
         $this->ensureConnectionCalled();
         return $this->redis->sRandMember(self::JOBS_RUNNING);
@@ -173,13 +188,19 @@ class PhoreSchedulerRedisConnector
     public function countPendingTasks($jobId)
     {
         $this->ensureConnectionCalled();
-        return $this->redis->lLen($jobId . self::TASKS_RUNNING);
+        return $this->redis->lLen($jobId . self::TASKS_PENDING);
     }
 
     public function countRunningTasks($jobId)
     {
         $this->ensureConnectionCalled();
         return $this->redis->sCard($jobId . self::TASKS_RUNNING);
+    }
+
+    public function countFinishedTasks($jobId)
+    {
+        $this->ensureConnectionCalled();
+        return $this->redis->sCard($jobId . self::TASKS_DONE);
     }
 
     public function getFirstPendingTaskId($jobId)
