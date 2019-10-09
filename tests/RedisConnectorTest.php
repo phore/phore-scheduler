@@ -43,22 +43,6 @@ class RedisConnectorTest extends TestCase
         $this->assertEquals(1, count($c->getPendingTasks($j->jobId)));
     }
 
-
-    public function testJobLock()
-    {
-        $c = $this->c;
-
-        $task = new PhoreSchedulerTask("");
-
-        $ret = $c->lockTask($task);
-        $this->assertEquals(true, $ret);
-
-        $ret = $c->lockTask($task);
-        $this->assertEquals(false, $ret);
-
-        $c->unlockTask($task);
-    }
-
     public function testGetJobById()
     {
         $job = new PhoreSchedulerJob();
