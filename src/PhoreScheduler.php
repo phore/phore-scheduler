@@ -21,8 +21,6 @@ class PhoreScheduler implements LoggerAwareInterface
      */
     private $connector;
 
-    //protected $commands = [];
-
     /**
      * @var NullLogger
      */
@@ -196,14 +194,11 @@ class PhoreScheduler implements LoggerAwareInterface
         if($task->nRetries > 0) {
             $this->connector->moveRunningTaskToPending($job->jobId, $task->taskId);
             $task->nRetries--;
-            $log['status'] = "retry";
         } else {
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
             $task->status = PhoreSchedulerTask::STATUS_FAILED;
-            $log['status'] = $task->status;
         }
         $this->connector->updateTask($job->jobId, $task);
-        $this->connector->addTaskLog($job->jobId, $task->taskId, $log);
 
         if(!$job->continueOnFailure) {
             $this->_forceJobFailure($job->jobId);
@@ -234,17 +229,6 @@ class PhoreScheduler implements LoggerAwareInterface
             $task->return = phore_serialize($return);
             $task->status = PhoreSchedulerTask::STATUS_OK;
             $this->connector->updateTask($job->jobId, $task);
-
-            $log['status'] = $task->status;
-            $log['starttime'] = $task->startTime;
-            $log['runtime'] = $task->endTime - $task->startTime;
-            $log['endtime'] = $task->endTime;
-            $log['retriesLeft'] = $task->nRetries;
-            $log['message'] = $task->message;
-            $log['return'] = $task->return;
-            $log['execHost'] = $task->execHost;
-            $log['execPid'] = $task->execPid;
-            $this->connector->addTaskLog($job->jobId, $task->taskId, $log);
         } catch (\Error $e) {
             $errorMsg = "Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString();
             $this->log->alert($errorMsg);

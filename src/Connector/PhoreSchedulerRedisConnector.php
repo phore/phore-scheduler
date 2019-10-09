@@ -183,7 +183,10 @@ class PhoreSchedulerRedisConnector
     public function updateTask($jobId, PhoreSchedulerTask $task)
     {
         $this->ensureConnection();
-        $this->redis->set($jobId . "_" . $task->taskId, phore_serialize($task));
+        $taskString = phore_serialize($task);
+        $log = microtime(true) . "_" .  $taskString;
+        $this->redis->sAdd($jobId ."_". $task->taskId . "_log", $log);
+        return  $this->redis->set($jobId . "_" . $task->taskId, $taskString);
     }
 
     public function getTaskById($jobId, $taskId) : PhoreSchedulerTask
@@ -344,12 +347,4 @@ class PhoreSchedulerRedisConnector
         $this->redis->sRem($this->prefix . "_locked_tasks", $task->taskId);
     }
 
-    /**
-     * task log
-     */
-
-    public function addTaskLog($jobId, $taskId, array $log) {
-        $this->ensureConnection();
-        return $this->redis->sAdd($jobId ."_". $taskId . "_log", serialize($log));
-    }
 }
