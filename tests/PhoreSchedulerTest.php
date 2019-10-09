@@ -11,7 +11,6 @@ namespace Test;
 
 use Phore\Scheduler\Connector\PhoreSchedulerRedisConnector;
 use Phore\Scheduler\PhoreScheduler;
-use Phore\Scheduler\Type\PhoreSchedulerTask;
 use PHPUnit\Framework\TestCase;
 
 class PhoreSchedulerTest extends TestCase
@@ -126,6 +125,42 @@ class PhoreSchedulerTest extends TestCase
         $this->assertEquals("failed", $s->getConnector()->getJobById($job2->getJob()->jobId)->status);
         //fifth iteration
         $this->assertEquals(false, $s->runNext());
+    }
+
+    public function testRunSequentialJobWithTimeout()
+    {
+        //setup
+        $s = $this->s;
+        $job1 = $s->createJob("job1");
+        $jobId = $job1->getJob()->jobId;
+        $job1->getJob()->nParallelTasks = 1;
+        $job1->addTask("test", ["task" => "1"], 0, 0.1);
+        $job1->addTask("test", ["task" => "2"], 3, 2);
+        $job1->getTasks()[0]->startTime = microtime(true);
+        $job1->save();
+        $runningTaskId = $job1->getTasks()[0]->taskId;
+        $s->getConnector()->addTaskToRunning($jobId, $runningTaskId);
+        $s->getConnector()->removeTaskFromPending($jobId, $runningTaskId);
+
+        //first iteration : wait for running task to finish
+        $this->assertEquals(true, $s->runNext());
+        $this->assertEquals(1, $s->getConnector()->countRunningJobs());
+        $this->assertEquals(1, $s->getConnector()->countPendingTasks($jobId));
+        $this->assertEquals(1, $s->getConnector()->countRunningTasks($jobId));
+        $this->assertEquals(0, $s->getConnector()->countFinishedTasks($jobId));
+
+        //second iteration : clear timed out task and run next
+        usleep(100000);
+        $this->assertEquals(true, $s->runNext());
+        $this->assertEquals(0, $s->getConnector()->countRunningJobs());
+        $this->assertEquals(1, $s->getConnector()->countFinishedJobs());
+        $this->assertEquals(0, $s->getConnector()->countPendingTasks($jobId));
+        $this->assertEquals(0, $s->getConnector()->countRunningTasks($jobId));
+        $this->assertEquals(2, $s->getConnector()->countFinishedTasks($jobId));
+
+        //third iteration
+        $this->assertEquals(false, $s->runNext());
+
     }
 
 
