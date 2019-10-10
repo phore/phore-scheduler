@@ -48,9 +48,12 @@ class PhoreScheduler implements LoggerAwareInterface
 
     public function _createJob(PhoreSchedulerJob $job, array $tasks)
     {
+        $nTasks = 0;
         foreach ($tasks as $task) {
             $this->connector->addTask($job, $task);
+            $nTasks++;
         }
+        $job->nTasks;
         $this->connector->addJob($job);
     }
 
@@ -92,6 +95,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
             $task->status = PhoreSchedulerTask::STATUS_FAILED;
             $job->status = PhoreSchedulerJob::STATUS_FAILED;
+            $job->nFailedTasks++;
             $this->connector->updateJob($job);
         }
         $this->connector->updateTask($job->jobId, $task);
@@ -127,6 +131,8 @@ class PhoreScheduler implements LoggerAwareInterface
             $task->status = PhoreSchedulerTask::STATUS_OK;
             $this->connector->updateTask($job->jobId, $task);
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
+            $job->nSuccessfulTasks++;
+            $this->connector->updateJob($job);
         } catch (\Error $e) {
             $errorMsg = "Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString();
             $this->log->alert($errorMsg);

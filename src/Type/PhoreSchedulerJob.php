@@ -26,13 +26,13 @@ class PhoreSchedulerJob
 
     public $status;
 
-    public $nTasks;
+    public $nTasks = 0;
 
     public $nParallelTasks = 100;
 
-    public $nFailedTasks;
+    public $nFailedTasks = 0;
 
-    public $nSuccessfulTasks;
+    public $nSuccessfulTasks = 0;
 
     public $startTime;
 
