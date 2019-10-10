@@ -239,7 +239,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $curJobInfo["tasks_finished"] = $this->connector->countFinishedTasks($job->jobId);
             $curJobInfo["tasks_ok"] = $job->nSuccessfulTasks;
             $curJobInfo["tasks_failed"] = $job->nFailedTasks;
-            foreach ($this->connector->getPendingTasks($job->$jobId) as $task) {
+            foreach ($this->connector->getPendingTasks($job->jobId) as $task) {
                 $curJobInfo["tasks"][] = (array)$task;
             }
             $ret[] = $curJobInfo;
@@ -253,13 +253,13 @@ class PhoreScheduler implements LoggerAwareInterface
             $curJobInfo["tasks_finished"] = $this->connector->countFinishedTasks($job->jobId);
             $curJobInfo["tasks_ok"] = $job->nSuccessfulTasks;
             $curJobInfo["tasks_failed"] = $job->nFailedTasks;
-            foreach ($this->connector->getPendingTasks($job->$jobId) as $task) {
+            foreach ($this->connector->getPendingTasks($job->jobId) as $task) {
                 $curJobInfo["tasks"][] = (array)$task;
             }
-            foreach ($this->connector->getRunningTasks($job->$jobId) as $task) {
+            foreach ($this->connector->getRunningTasks($job->jobId) as $task) {
                 $curJobInfo["tasks"][] = (array)$task;
             }
-            foreach ($this->connector->getFinishedTasks($job->$jobId) as $task) {
+            foreach ($this->connector->getFinishedTasks($job->jobId) as $task) {
                 $curJobInfo["tasks"][] = (array)$task;
             }
             $ret[] = $curJobInfo;
@@ -273,13 +273,13 @@ class PhoreScheduler implements LoggerAwareInterface
             $curJobInfo["tasks_finished"] = $this->connector->countFinishedTasks($job->jobId);
             $curJobInfo["tasks_ok"] = $job->nSuccessfulTasks;
             $curJobInfo["tasks_failed"] = $job->nFailedTasks;
-            foreach ($this->connector->getPendingTasks($job->$jobId) as $task) {
+            foreach ($this->connector->getPendingTasks($job->jobId) as $task) {
                 $curJobInfo["tasks"][] = (array)$task;
             }
-            foreach ($this->connector->getRunningTasks($job->$jobId) as $task) {
+            foreach ($this->connector->getRunningTasks($job->jobId) as $task) {
                 $curJobInfo["tasks"][] = (array)$task;
             }
-            foreach ($this->connector->getFinishedTasks($job->$jobId) as $task) {
+            foreach ($this->connector->getFinishedTasks($job->jobId) as $task) {
                 $curJobInfo["tasks"][] = (array)$task;
             }
             $ret[] = $curJobInfo;
