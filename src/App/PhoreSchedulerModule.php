@@ -114,7 +114,7 @@ class PhoreSchedulerModule implements AppModule
                     (string)$value["taskId"],
                     (string)$value["command"],
                     (string)$value["status"],
-                    (string)$value["retryCount"],
+                    (string)$value["nRetries"],
 
                     $value["startTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", $value["startTime"]),
                     $value["endTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", $value["endTime"]),

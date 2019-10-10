@@ -232,6 +232,7 @@ class PhoreScheduler implements LoggerAwareInterface
         array_push($jobs, $this->connector->getFinishedJobs());
 
         foreach ($this->connector->getPendingJobs() as $job) {
+            $job->status = "pending";
             $curJobInfo = (array)$job;
             $curJobInfo["tasks_all"] = $job->nTasks;
             $curJobInfo["tasks_pending"] = $this->connector->countPendingTasks($job->jobId);
@@ -246,6 +247,7 @@ class PhoreScheduler implements LoggerAwareInterface
         }
 
         foreach ($this->connector->getRunningJobs() as $job) {
+            $job->status = "running";
             $curJobInfo = (array)$job;
             $curJobInfo["tasks_all"] = $job->nTasks;
             $curJobInfo["tasks_pending"] = $this->connector->countPendingTasks($job->jobId);
