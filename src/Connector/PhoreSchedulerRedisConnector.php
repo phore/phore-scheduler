@@ -139,18 +139,28 @@ class PhoreSchedulerRedisConnector
         return $this->getJobList(self::JOBS_DONE);
     }
 
+    /**
+     * @return PhoreSchedulerJob[]
+     */
     public function getPendingJobs()
     {
         $this->ensureConnectionCalled();
         return $this->getJobList(self::JOBS_PENDING);
     }
 
-    public function getRunnningJobs()
+    /**
+     * @return PhoreSchedulerJob[]
+     */
+    public function getRunningJobs()
     {
         $this->ensureConnectionCalled();
         return $this->getJobList(self::JOBS_RUNNING);
     }
 
+    /**
+     * @param string $key
+     * @return PhoreSchedulerJob[]
+     */
     private function getJobList(string $key)
     {
         $jobs = [];
@@ -236,6 +246,10 @@ class PhoreSchedulerRedisConnector
         return $this->redis->sMove($jobId . self::TASKS_RUNNING, $jobId . self::TASKS_DONE, $taskId);
     }
 
+    /**
+     * @param $jobId
+     * @return PhoreSchedulerTask[]
+     */
     public function getPendingTasks($jobId) : array
     {
         $this->ensureConnectionCalled();
@@ -246,6 +260,24 @@ class PhoreSchedulerRedisConnector
         return $tasks;
     }
 
+    /**
+     * @param $jobId
+     * @return PhoreSchedulerTask[]
+     */
+    public function getRunningTasks($jobId)
+    {
+        $this->ensureConnectionCalled();
+        $tasks = [];
+        foreach ($this->redis->sMembers($jobId . self::TASKS_RUNNING) as $taskId) {
+            $tasks[] = $this->getTaskById($jobId, $taskId);
+        }
+        return $tasks;
+    }
+
+    /**
+     * @param $jobId
+     * @return PhoreSchedulerTask[]
+     */
     public function getFinishedTasks($jobId) : array
     {
         $this->ensureConnectionCalled();
