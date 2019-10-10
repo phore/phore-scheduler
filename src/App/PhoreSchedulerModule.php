@@ -52,9 +52,9 @@ class PhoreSchedulerModule implements AppModule
 
             $task = $tbl[0];
             $runTime = "--";
-            if ($task["startTime"] != null) {
+            if ($task["startTime"] !== null) {
                 $runTime = $task["startTime"];
-                if ($task["endTime"] != null)
+                if ($task["endTime"] !== null)
                     $runTime = $task["endTime"]- $runTime;
                 else
                     $runTime = time() - $runTime;
@@ -69,9 +69,9 @@ class PhoreSchedulerModule implements AppModule
                     ],
                     [
                         [ "Status", (string)$task["status"] ],
-                        [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", $task["startTime"]) . "GMT" ],
+                        [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["startTime"]) . "GMT" ],
                         [ "Job scheduled at", (string)gmdate("Y-m-d H:i:s", $job["runAtTs"]) . "GMT" ],
-                        [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", $task["endTime"]) . "GMT" ],
+                        [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["endTime"]) . "GMT" ],
                         [ "Run time[s]", $runTime ],
                         [ "Command", (string)$task["command"] ],
                         [ "Arguments", ["pre @mb-0" => (string)trim (print_r($task["arguments"], true))] ],
@@ -93,19 +93,17 @@ class PhoreSchedulerModule implements AppModule
         $app->addPage("{$this->startRoute}/scheduler/:jobId", function (string $jobId, App $app) {
             $scheduler = $app->get($this->diName);
             if ( ! $scheduler instanceof PhoreScheduler)
-                throw new \InvalidArgumentException("{$this->diName} schould be from type PhoreScheduler");
-
-
+                throw new \InvalidArgumentException("{$this->diName} should be from type PhoreScheduler");
 
 
             $tbl = phore_array_transform($scheduler->getJobInfo(null, $jobId)[0]["tasks"], function ($key, $value) use ($jobId) {
                 $runTime = "--";
                 if ($value["startTime"] != null) {
                     $runTime = $value["startTime"];
-                    if ($value["endTime"] != null)
-                        $runTime = $value["endTime"]- $runTime;
-                    else
+                    if ($value["endTime"] === null)
                         $runTime = time() - $runTime;
+                    else
+                        $runTime = $value["endTime"]- $runTime;
                 }
 
 
@@ -116,8 +114,8 @@ class PhoreSchedulerModule implements AppModule
                     (string)$value["status"],
                     (string)$value["nRetries"],
 
-                    $value["startTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", $value["startTime"]),
-                    $value["endTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", $value["endTime"]),
+                    $value["startTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", (int) $value["startTime"]),
+                    $value["endTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", (int) $value["endTime"]),
                     (string)$runTime,
                     fhtml(["a @href=? @btn @btn-primary" => "Details"], ["{$this->startRoute}/scheduler/{$jobId}/{$value["taskId"]}"])
                 ];

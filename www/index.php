@@ -33,8 +33,21 @@ $app->addPage("/", function (PhoreScheduler $phoreScheduler, Request $request) {
 
     $msg = "";
     if ($request->GET->has("create")) {
-        $phoreScheduler->createJob("test 01")->addTask("someTask", ["arg1"=>"argval1"])->save();
+        $testJobRun = $phoreScheduler->createJob("test Run");
+        $testJobRun->addTask("testRunFail", ["arg1"=>"argval1"], 1, 10);
+        $testJobRun->addTask("testRunSuccess", ["arg1"=>"argval1"], 1, 10);
+        $testJobRun->save();
+        $testJobQueue = $phoreScheduler->createJob("test Queue");
+        $testJobQueue->getJob()->runAtTs = time() + 60;
+        $testJobQueue->addTask("testRunSuccess", ["arg1"=>"argval1"], 1, 10);
+        $testJobQueue->save();
         $msg = "Job Created";
+        $phoreScheduler->defineCommand("testRunFail", function(array $args) {
+            throw new \Error("test failed");
+        });
+        $phoreScheduler->defineCommand("testRunSuccess", function(array $args) {
+            return "test successful";
+        });
     }
 
 
