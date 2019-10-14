@@ -108,7 +108,7 @@ class PhoreSchedulerModule implements AppModule
 
 
                 return [
-
+                    $key+1,
                     (string)$value["taskId"],
                     (string)$value["command"],
                     (string)$value["status"],
@@ -128,11 +128,11 @@ class PhoreSchedulerModule implements AppModule
                 "Scheduler Task list for job {$jobId}",
                 pt("table-striped table-hover")->basic_table(
                     [
-                        "TaksID", "Command", "Status", "Retries",
+                        "#", "TaksID", "Command", "Status", "Retries",
                         "Start Time", "End Time", "RunTime", ""
                     ],
                     $tbl,
-                    ["","","","", "",  "", "", "@style=text-align:right"]
+                    ["","","","","", "",  "", "", "@style=text-align:right"]
                 )
 
             );
