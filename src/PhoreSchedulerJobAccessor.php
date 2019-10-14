@@ -35,9 +35,9 @@ class PhoreSchedulerJobAccessor
     }
 
 
-    public function addTask(string $command, array $arguments = [], $retries = 3, $timeout = 600) : self
+    public function addTask(string $command, array $arguments = [], $retries = 2, $timeout = 1800) : self
     {
-        $this->tasks[] = $task = new PhoreSchedulerTask($command, $arguments, $retries, $timeout);
+        $this->tasks[] = new PhoreSchedulerTask($command, $arguments, $retries, $timeout);
         return $this;
     }
 

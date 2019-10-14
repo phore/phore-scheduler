@@ -93,6 +93,7 @@ class PhoreSchedulerModule implements AppModule
 
         $app->addPage("{$this->startRoute}/scheduler/:jobId", function (string $jobId, App $app, Request $request) {
             $scheduler = $app->get($this->diName);
+
             if ( ! $scheduler instanceof PhoreScheduler)
                 throw new \InvalidArgumentException("{$this->diName} should be from type PhoreScheduler");
 
@@ -146,11 +147,16 @@ class PhoreSchedulerModule implements AppModule
          */
 
 
-        $app->addPage("{$this->startRoute}/scheduler", function (App $app) {
+        $app->addPage("{$this->startRoute}/scheduler", function (App $app, Request $request) {
 
             $scheduler = $app->get($this->diName);
             if ( ! $scheduler instanceof PhoreScheduler)
                 throw new \InvalidArgumentException("{$this->diName} schould be from type PhoreScheduler");
+
+            $jobId = $request->GET->get("cancelJob", false);
+            if($jobId !== false) {
+                $scheduler->cancelJob($jobId);
+            }
 
             $jobInfo = $scheduler->getJobInfo();
 
@@ -166,7 +172,8 @@ class PhoreSchedulerModule implements AppModule
                     $ji["nTasks"] . " Tasks (Pending: {$ji["tasks_pending"]}, Running: {$ji["tasks_running"]}, Success: {$ji["nSuccessfulTasks"]}, Failed: {$ji["nFailedTasks"]})",
                     gmdate("Y-m-d H:i:s", $ji["runAtTs"]) . "GMT",
                     [
-                        fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"])
+                        fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"]),
+                        fhtml(["a @href=? @btn @btn-danger" => "Cancel"], ["{$this->startRoute}/scheduler?cancelJob={$ji["jobId"]}"])
                     ]
                 ];
             });

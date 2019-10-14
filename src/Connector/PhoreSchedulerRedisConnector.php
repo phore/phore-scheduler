@@ -80,7 +80,7 @@ class PhoreSchedulerRedisConnector
     public function updateJob(PhoreSchedulerJob $job)
     {
         $this->ensureConnectionCalled();
-        $this->redis->set($job->jobId, phore_serialize($job));
+        return $this->redis->set($job->jobId, phore_serialize($job));
     }
 
     public function getJobById($jobId) : ?PhoreSchedulerJob
@@ -125,6 +125,12 @@ class PhoreSchedulerRedisConnector
     {
         $this->ensureConnectionCalled();
         return $this->redis->sMove(self::JOBS_RUNNING, self::JOBS_DONE, $jobId);
+    }
+
+    public function movePendingJobToDone($jobId)
+    {
+        $this->ensureConnectionCalled();
+        return $this->redis->sMove(self::JOBS_PENDING, self::JOBS_DONE, $jobId);
     }
 
     public function getRandomRunningJobId()

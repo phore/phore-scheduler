@@ -70,6 +70,28 @@ class PhoreScheduler implements LoggerAwareInterface
         return $this;
     }
 
+    public function cancelJob($jobId)
+    {
+        if(!$this->connector->moveRunningJobToDone($jobId)) {
+            $this->connector->movePendingJobToDone($jobId);
+        }
+
+        $job = $this->connector->getJobById($jobId);
+        $job->status = PhoreSchedulerJob::STATUS_CANCELLED;
+        $job->endTime = microtime(true);
+        $this->connector->updateJob($job);
+    }
+
+    public function pauseJob($jobId)
+    {
+        //TODO: Pause or reschedule job to future
+    }
+
+    public function deleteJob($jobId)
+    {
+        //TODO: delete all job related data
+    }
+
     /**
      * @param $job PhoreSchedulerJob
      * @throws \Exception
@@ -93,6 +115,7 @@ class PhoreScheduler implements LoggerAwareInterface
         } else {
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
             $task->status = PhoreSchedulerTask::STATUS_FAILED;
+            $job = $this->connector->getJobById($job->jobId);
             $job->status = PhoreSchedulerJob::STATUS_FAILED;
             $job->nFailedTasks++;
             $this->connector->updateJob($job);
@@ -101,6 +124,7 @@ class PhoreScheduler implements LoggerAwareInterface
 
         if(!$job->continueOnFailure) {
             $this->connector->moveRunningJobToDone($job->jobId);
+            $job = $this->connector->getJobById($job->jobId);
             $job->endTime = microtime(true);
             $this->connector->updateJob($job);
         }
@@ -130,6 +154,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $task->status = PhoreSchedulerTask::STATUS_OK;
             $this->connector->updateTask($job->jobId, $task);
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
+            $job = $this->connector->getJobById($job->jobId);
             $job->nSuccessfulTasks++;
             $this->connector->updateJob($job);
         } catch (\Error $e) {
@@ -179,11 +204,12 @@ class PhoreScheduler implements LoggerAwareInterface
             return true;
         }
 
-        $nRun = $this->connector->countRunningTasks($jobId);
-        $nPending = $this->connector->countPendingTasks($jobId);
-        $nFinished = $this->connector->countFinishedTasks($jobId);
-
         if($this->connector->countRunningTasks($jobId) > 0 || $this->connector->countPendingTasks($jobId) > 0) {
+            return true;
+        }
+
+        $job = $this->connector->getJobById($jobId); // get updated version in case status changed
+        if($job->status === PhoreSchedulerJob::STATUS_CANCELLED) {
             return true;
         }
 
@@ -203,9 +229,9 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->log->notice("Starting in background mode.");
             try {
                 $this->runNext();
-                if (!$this->runNext()) {
-                    sleep(1);
-                }
+//                if (!$this->runNext()) {
+//                    sleep(1);
+//                }
             } catch (\Exception $e) {
                 $this->log->alert("Exception running scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
                 sleep(10);
@@ -269,10 +295,10 @@ class PhoreScheduler implements LoggerAwareInterface
             }
             $ret[] = $curJobInfo;
         } else {
-            $jobs = [];
-            array_push($jobs, $this->connector->getPendingJobs());
-            array_push($jobs, $this->connector->getRunningJobs());
-            array_push($jobs, $this->connector->getFinishedJobs());
+//            $jobs = [];
+//            array_push($jobs, $this->connector->getPendingJobs());
+//            array_push($jobs, $this->connector->getRunningJobs());
+//            array_push($jobs, $this->connector->getFinishedJobs());
 
             foreach ($this->connector->getPendingJobs() as $job) {
                 $job->status = "pending";

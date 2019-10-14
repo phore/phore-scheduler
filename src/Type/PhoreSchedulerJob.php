@@ -17,6 +17,7 @@ class PhoreSchedulerJob
 {
     const STATUS_FAILED = "failed";
     const STATUS_OK = "ok";
+    const STATUS_CANCELLED = "cancelled";
 
     public $jobId;
 
