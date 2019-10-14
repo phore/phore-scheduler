@@ -53,7 +53,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->connector->addTask($job, $task);
             $nTasks++;
         }
-        $job->nTasks;
+        $job->nTasks = $nTasks;
         $this->connector->addJob($job);
     }
 

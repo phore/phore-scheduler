@@ -48,6 +48,7 @@ $app->addPage("/", function (PhoreScheduler $phoreScheduler, Request $request) {
         $phoreScheduler->defineCommand("testRunSuccess", function(array $args) {
             return "test successful";
         });
+        $phoreScheduler->runNext();
     }
 
 
