@@ -234,22 +234,38 @@ class PhoreScheduler implements LoggerAwareInterface
         if($jobId !== null) {
             $job = $this->connector->getJobById($jobId);
             $curJobInfo = (array)$job;
+            $curJobInfo["tasks"]=[];
             $curJobInfo["tasks_all"] = $job->nTasks;
-            $curJobInfo["tasks_pending"] = $this->connector->countPendingTasks($job->jobId);
-            $curJobInfo["tasks_running"] = $this->connector->countRunningTasks($job->jobId);
-            $curJobInfo["tasks_finished"] = $this->connector->countFinishedTasks($job->jobId);
-            $curJobInfo["tasks_ok"] = $job->nSuccessfulTasks;
-            $curJobInfo["tasks_failed"] = $job->nFailedTasks;
-            foreach ($this->connector->getPendingTasks($job->jobId) as $task) {
-                $task->status = "pending";
-                $curJobInfo["tasks"][] = (array)$task;
-            }
-            foreach ($this->connector->getRunningTasks($job->jobId) as $task) {
-                $task->status = "running";
-                $curJobInfo["tasks"][] = (array)$task;
-            }
-            foreach ($this->connector->getFinishedTasks($job->jobId) as $task) {
-                $curJobInfo["tasks"][] = (array)$task;
+            switch ($filterStatus) {
+                case "pending":
+                    foreach ($this->connector->getPendingTasks($job->jobId) as $task) {
+                        $task->status = "pending";
+                        $curJobInfo["tasks"][] = (array)$task;
+                    }
+                    break;
+                case "running":
+                    foreach ($this->connector->getRunningTasks($job->jobId) as $task) {
+                        $task->status = "running";
+                        $curJobInfo["tasks"][] = (array)$task;
+                    }
+                    break;
+                case "finished":
+                    foreach ($this->connector->getFinishedTasks($job->jobId) as $task) {
+                        $curJobInfo["tasks"][] = (array)$task;
+                    }
+                    break;
+                default:
+                    foreach ($this->connector->getRunningTasks($job->jobId) as $task) {
+                        $task->status = "running";
+                        $curJobInfo["tasks"][] = (array)$task;
+                    }
+                    foreach ($this->connector->getFinishedTasks($job->jobId) as $task) {
+                        $curJobInfo["tasks"][] = (array)$task;
+                    }
+                    foreach ($this->connector->getPendingTasks($job->jobId) as $task) {
+                        $task->status = "pending";
+                        $curJobInfo["tasks"][] = (array)$task;
+                    }
             }
             $ret[] = $curJobInfo;
         } else {

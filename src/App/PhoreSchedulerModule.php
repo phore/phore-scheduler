@@ -9,9 +9,10 @@
 namespace Phore\Scheduler\App;
 
 
-use Phore\Html\Helper\Table;
 use Phore\MicroApp\App;
 use Phore\MicroApp\AppModule;
+use Phore\MicroApp\Type\Request;
+use Phore\MicroApp\Type\RouteParams;
 use Phore\Scheduler\PhoreScheduler;
 use Phore\StatusPage\PageHandler\NaviButtonWithIcon;
 use Phore\StatusPage\StatusPageApp;
@@ -90,13 +91,14 @@ class PhoreSchedulerModule implements AppModule
          * Job Info
          */
 
-        $app->addPage("{$this->startRoute}/scheduler/:jobId", function (string $jobId, App $app) {
+        $app->addPage("{$this->startRoute}/scheduler/:jobId", function (string $jobId, App $app, Request $request) {
             $scheduler = $app->get($this->diName);
             if ( ! $scheduler instanceof PhoreScheduler)
                 throw new \InvalidArgumentException("{$this->diName} should be from type PhoreScheduler");
 
+            $filterStatus = $request->GET->get("status", null);
 
-            $tbl = phore_array_transform($scheduler->getJobInfo(null, $jobId)[0]["tasks"], function ($key, $value) use ($jobId) {
+            $tbl = phore_array_transform($scheduler->getJobInfo($filterStatus, $jobId)[0]["tasks"], function ($key, $value) use ($jobId) {
                 $runTime = "--";
                 if ($value["startTime"] != null) {
                     $runTime = $value["startTime"];
@@ -105,7 +107,6 @@ class PhoreSchedulerModule implements AppModule
                     else
                         $runTime = $value["endTime"]- $runTime;
                 }
-
 
                 return [
                     $key+1,
