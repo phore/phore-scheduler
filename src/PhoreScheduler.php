@@ -77,9 +77,12 @@ class PhoreScheduler implements LoggerAwareInterface
         }
 
         $job = $this->connector->getJobById($jobId);
-        $job->status = PhoreSchedulerJob::STATUS_CANCELLED;
-        $job->endTime = microtime(true);
-        $this->connector->updateJob($job);
+        if($job !== null) {
+            $job->status = PhoreSchedulerJob::STATUS_CANCELLED;
+            $job->endTime = microtime(true);
+            $this->connector->updateJob($job);
+        }
+
     }
 
     public function pauseJob($jobId)

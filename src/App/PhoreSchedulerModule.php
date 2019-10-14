@@ -70,6 +70,8 @@ class PhoreSchedulerModule implements AppModule
                     ],
                     [
                         [ "Status", (string)$task["status"] ],
+                        [ "Host", (string)$task["execHost"] ],
+                        [ "PID", (string)$task["execPid"] ],
                         [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["startTime"]) . "GMT" ],
                         [ "Job scheduled at", (string)gmdate("Y-m-d H:i:s", $job["runAtTs"]) . "GMT" ],
                         [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["endTime"]) . "GMT" ],
