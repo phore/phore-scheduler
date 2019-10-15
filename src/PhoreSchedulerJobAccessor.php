@@ -26,6 +26,9 @@ class PhoreSchedulerJobAccessor
      */
     private $job;
 
+    /**
+     * @var PhoreSchedulerTask[]
+     */
     private $tasks = [];
 
     public function __construct(PhoreScheduler $scheduler, PhoreSchedulerJob $job)

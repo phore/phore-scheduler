@@ -261,7 +261,9 @@ class PhoreSchedulerRedisConnector
         $this->ensureConnectionCalled();
         $tasks = [];
         foreach ($this->redis->lRange($jobId . self::TASKS_PENDING, 0, -1) as $taskId) {
-            $tasks[] = $this->getTaskById($jobId, $taskId);
+            $task = $this->getTaskById($jobId, $taskId);
+            $task->status = PhoreSchedulerTask::STATUS_PENDING;
+            $tasks[] = $task;
         }
         return $tasks;
     }
@@ -275,7 +277,9 @@ class PhoreSchedulerRedisConnector
         $this->ensureConnectionCalled();
         $tasks = [];
         foreach ($this->redis->sMembers($jobId . self::TASKS_RUNNING) as $taskId) {
-            $tasks[] = $this->getTaskById($jobId, $taskId);
+            $task = $this->getTaskById($jobId, $taskId);
+            $task->status = PhoreSchedulerTask::STATUS_RUNNING;
+            $tasks[] = $task;
         }
         return $tasks;
     }

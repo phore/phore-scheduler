@@ -16,6 +16,8 @@ namespace Phore\Scheduler\Type;
 class PhoreSchedulerTask
 {
 
+    const STATUS_PENDING = "pending";
+    const STATUS_RUNNING = "running";
     const STATUS_FAILED = "failed";
     const STATUS_OK = "ok";
 

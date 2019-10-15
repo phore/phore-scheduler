@@ -15,6 +15,8 @@ namespace Phore\Scheduler\Type;
  */
 class PhoreSchedulerJob
 {
+    const STATUS_PENDING = "pending";
+    const STATUS_RUNNING = "running";
     const STATUS_FAILED = "failed";
     const STATUS_OK = "ok";
     const STATUS_CANCELLED = "cancelled";
@@ -30,6 +32,10 @@ class PhoreSchedulerJob
     public $nTasks = 0;
 
     public $nParallelTasks = 100;
+
+    public $nPendingTasks = 0;
+
+    public $nRunningTasks = 0;
 
     public $nFailedTasks = 0;
 
