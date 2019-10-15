@@ -163,9 +163,4 @@ class PhoreSchedulerTest extends TestCase
 
     }
 
-    public function testUndefinedCommand() {
-
-    }
-
-
 }

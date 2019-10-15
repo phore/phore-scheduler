@@ -108,4 +108,38 @@ class RedisConnectorTest extends TestCase
         $this->assertEquals($task, $result[0]);
     }
 
+    public function testDeleteJobById() {
+        $job1 = new PhoreSchedulerJob();
+        $this->c->addJob($job1);
+        $task11 = new PhoreSchedulerTask("test1");
+        $this->c->addTask($job1, $task11);
+        $this->c->addTaskToRunning($job1->jobId, $task11->taskId);
+        $task12 = new PhoreSchedulerTask("test2");
+        $this->c->addTask($job1, $task12);
+
+        $job2 = new PhoreSchedulerJob();
+        $this->c->addJob($job2);
+        $task21 = new PhoreSchedulerTask("test3");
+        $this->c->addTask($job2, $task21);
+
+        //job not cancelled
+        $this->assertFalse($this->c->deleteJobById($job1->jobId));
+
+        //job has running tasks
+        $job1->status = "cancelled";
+        $this->c->updateJob($job1);
+        $this->assertFalse($this->c->deleteJobById($job1->jobId));
+
+        $this->c->moveRunningTaskToDone($job1->jobId, $task11->taskId);
+        $this->assertTrue($this->c->deleteJobById($job1->jobId));
+
+        //job not existent
+        $this->assertFalse($this->c->deleteJobById($job1->jobId));
+
+        $this->assertEquals(0, $this->c->countPendingTasks($job1->jobId));
+        $this->assertEquals(0, $this->c->countRunningTasks($job1->jobId));
+        $this->assertEquals(0, $this->c->countFinishedTasks($job1->jobId));
+
+    }
+
 }

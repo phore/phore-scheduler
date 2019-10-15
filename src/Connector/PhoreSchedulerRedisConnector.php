@@ -234,7 +234,7 @@ class PhoreSchedulerRedisConnector
         return $this->getTaskById($jobId, $taskId);
     }
 
-    public function addTaskToRunning($jobId, $taskId)
+    public function addTaskToRunning(string $jobId, string $taskId)
     {
         $this->ensureConnectionCalled();
         return $this->redis->sAdd($jobId . self::TASKS_RUNNING, $taskId);
@@ -314,5 +314,33 @@ class PhoreSchedulerRedisConnector
         if($this->redis->sRem($jobId . self::TASKS_RUNNING, $taskId) !== 1) {
             throw new \Exception("failed to remove running task.");
         }
+    }
+
+    public function deleteJobById($jobId) {
+        $job = $this->getJobById($jobId);
+        if($job === null) {
+            return false;
+            throw new \Exception("Job not found.");
+        }
+        if($job->status !== PhoreSchedulerJob::STATUS_CANCELLED) {
+            return false;
+            throw new \Exception("Job has to be cancelled.");
+        }
+        if($this->countRunningTasks($jobId) > 0) {
+            //if job has running tasks let them finish first
+            return false;
+            throw new \Exception("Job has running tasks.");
+        }
+        $keys = $this->redis->keys($jobId."*");
+        $this->deleteKeys($keys);
+        $this->redis->sRem(self::JOBS_PENDING, $jobId);
+        $this->redis->sRem(self::JOBS_RUNNING, $jobId);
+        $this->redis->sRem(self::JOBS_DONE, $jobId);
+        return true;
+    }
+
+    private function deleteKeys(array $keys) {
+
+        $this->redis->del($keys);
     }
 }

@@ -93,6 +93,7 @@ class PhoreScheduler implements LoggerAwareInterface
     public function deleteJob($jobId)
     {
         //TODO: delete all job related data
+        $this->connector->deleteJobById($jobId);
     }
 
     /**
