@@ -126,7 +126,7 @@ class PhoreScheduler implements LoggerAwareInterface
     private function _cancelTasksOnTimeout(PhoreSchedulerJob $job)
     {
         foreach ($this->connector->yieldRunningTasks($job->jobId) as $task) {
-            if($task->startTime + $task->timeout/1000000 < microtime(true)) {
+            if($task->startTime + $task->timeout < microtime(true)) {
                 $this->_rescheduleTask($job, $task, "timeout");
             }
         }

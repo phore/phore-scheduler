@@ -73,7 +73,7 @@ class PhoreSchedulerModule implements AppModule
                         [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["startTime"]) . "GMT" ],
                         [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["endTime"]) . "GMT" ],
                         [ "Run time[s]", $runTime ],
-                        [ "Timeout", $task["timeout"] ],
+                        [ "Timeout[s]", $task["timeout"] ],
                         [ "Remaining Retries", $task["nRetries"] ],
                         [ "Command", (string)$task["command"] ],
                         [ "Arguments", ["pre @mb-0" => (string)trim (print_r($task["arguments"], true))] ],

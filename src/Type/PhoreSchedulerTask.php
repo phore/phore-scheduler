@@ -51,7 +51,7 @@ class PhoreSchedulerTask
         $this->command = $command;
         $this->arguments = $arguments;
         $this->nRetries = $retries;
-        $this->timeout = $timeout * 1000000;
+        $this->timeout = $timeout;
     }
 
 }
