@@ -334,7 +334,7 @@ class PhoreSchedulerRedisConnector
             //if job has running tasks let them finish first or cancel on timeout
             $tasks = $this->getRunningTasks($jobId);
             foreach ($tasks as $task) {
-                if($task->startTime + $task->timeout > microtime(true)) {
+                if($task->startTime + $task->timeout/1000000 > microtime(true)) {
                     //return false;
                     throw new \Exception("Job has running tasks.");
                 }
