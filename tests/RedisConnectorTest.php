@@ -111,9 +111,12 @@ class RedisConnectorTest extends TestCase
     public function testDeleteJobById() {
         $job1 = new PhoreSchedulerJob();
         $this->c->addJob($job1);
-        $task11 = new PhoreSchedulerTask("test1");
+        $task11 = new PhoreSchedulerTask("test1", [], 1, 0);
         $this->c->addTask($job1, $task11);
         $this->c->addTaskToRunning($job1->jobId, $task11->taskId);
+        $t11 = $this->c->getTaskById($job1->jobId, $task11->taskId);
+        $t11->startTime = microtime(true);
+        $this->c->updateTask($job1->jobId, $t11);
         $task12 = new PhoreSchedulerTask("test2");
         $this->c->addTask($job1, $task12);
 
@@ -122,23 +125,20 @@ class RedisConnectorTest extends TestCase
         $task21 = new PhoreSchedulerTask("test3");
         $this->c->addTask($job2, $task21);
 
-        //job not cancelled
-        $this->assertFalse($this->c->deleteJobById($job1->jobId));
-
-        //job has running tasks
+        //job has running timed out task
         $job1->status = "cancelled";
         $this->c->updateJob($job1);
-        $this->assertFalse($this->c->deleteJobById($job1->jobId));
-
-        $this->c->moveRunningTaskToDone($job1->jobId, $task11->taskId);
         $this->assertTrue($this->c->deleteJobById($job1->jobId));
-
-        //job not existent
-        $this->assertFalse($this->c->deleteJobById($job1->jobId));
 
         $this->assertEquals(0, $this->c->countPendingTasks($job1->jobId));
         $this->assertEquals(0, $this->c->countRunningTasks($job1->jobId));
         $this->assertEquals(0, $this->c->countFinishedTasks($job1->jobId));
+
+        //job not existent
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Job not found.");
+        $this->c->deleteJobById($job1->jobId);
+
 
     }
 

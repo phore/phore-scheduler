@@ -4,6 +4,7 @@
 namespace Phore\Scheduler;
 
 
+use http\Exception;
 use Phore\Log\Logger\PhoreNullLogger;
 use Phore\Log\PhoreLogger;
 use Phore\Scheduler\Connector\PhoreSchedulerRedisConnector;
@@ -98,8 +99,14 @@ class PhoreScheduler implements LoggerAwareInterface
 
     public function deleteJob($jobId)
     {
-        //TODO: delete all job related data
-        return $this->connector->deleteJobById($jobId);
+        // return true or error msg
+        try {
+            $msg = $this->connector->deleteJobById($jobId);
+        } catch (\Exception $e) {
+            $msg = $e;
+        }
+        return $msg;
+
     }
 
     private function _validateFinishedJobState($jobId)

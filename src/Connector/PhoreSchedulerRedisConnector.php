@@ -323,11 +323,11 @@ class PhoreSchedulerRedisConnector
     public function deleteJobById($jobId) {
         $job = $this->getJobById($jobId);
         if($job === null) {
-            //return false;
+//            return false;
             throw new \Exception("Job not found.");
         }
         if($job->status !== PhoreSchedulerJob::STATUS_CANCELLED) {
-            //return false;
+//            return false;
             throw new \Exception("Job has to be cancelled.");
         }
         if($this->countRunningTasks($jobId) > 0) {
@@ -335,7 +335,7 @@ class PhoreSchedulerRedisConnector
             $tasks = $this->getRunningTasks($jobId);
             foreach ($tasks as $task) {
                 if($task->startTime + $task->timeout > microtime(true)) {
-                    //return false;
+//                    return false;
                     throw new \Exception("Job has running tasks.");
                 }
             }
