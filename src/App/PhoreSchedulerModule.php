@@ -43,15 +43,11 @@ class PhoreSchedulerModule implements AppModule
                 throw new \InvalidArgumentException("{$this->diName} should be of type PhoreScheduler");
 
 
-            $job = $scheduler->getJobInfo(null, $jobId)[0];
+            $task = $scheduler->getTaskDetails($jobId, $taskId);
+            if(empty($task)) {
+                throw new \InvalidArgumentException("Task not found.");
+            }
 
-            $tbl = phore_array_transform($job["tasks"], function ($key, $value) use ($taskId) {
-                if ($value["taskId"] == $taskId)
-                    return $value;
-            });
-
-
-            $task = $tbl[0];
             $runTime = "--";
             if ($task["startTime"] != null) {
                 $runTime = $task["startTime"];
@@ -72,13 +68,13 @@ class PhoreSchedulerModule implements AppModule
                         [ "Status", (string)$task["status"] ],
                         [ "Host", (string)$task["execHost"] ],
                         [ "PID", (string)$task["execPid"] ],
-                        [ "Job Start Date", (string)gmdate("Y-m-d H:i:s", $job["startTime"]) . "GMT (scheduled at ".(string)gmdate("Y-m-d H:i:s", $job["runAtTs"]).")  " ],
+                        [ "Job", fhtml(["a @href=?"  => "{$jobId}"], ["{$this->startRoute}/scheduler/{$jobId}"]) ],
+                        [ "Job Start Date", (string)gmdate("Y-m-d H:i:s", $task["jobStart"]) . "GMT (scheduled at ".(string)gmdate("Y-m-d H:i:s", $task["jobRunAt"]).")  " ],
                         [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["startTime"]) . "GMT" ],
                         [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["endTime"]) . "GMT" ],
                         [ "Run time[s]", $runTime ],
                         [ "Command", (string)$task["command"] ],
                         [ "Arguments", ["pre @mb-0" => (string)trim (print_r($task["arguments"], true))] ],
-
                         [ "Message", ["pre" => (string)$task["message"]] ]
                     ],
                     ["","",""]
@@ -90,7 +86,7 @@ class PhoreSchedulerModule implements AppModule
 
 
         /**
-         * Job Info
+         * Job Details and Task List
          */
 
         $app->addPage("{$this->startRoute}/scheduler/:jobId", function (string $jobId, App $app, Request $request) {
@@ -126,7 +122,6 @@ class PhoreSchedulerModule implements AppModule
                 ];
 
             });
-
 
             $runTime = "--";
             if ($jobInfo["startTime"] != null) {
@@ -164,7 +159,6 @@ class PhoreSchedulerModule implements AppModule
                     [$jobTbl],
                     ["",""]
                 )
-
             );
             $filter = $filterStatus == null ? "none" : $filterStatus;
             $e[] = pt()->card(
@@ -177,7 +171,6 @@ class PhoreSchedulerModule implements AppModule
                     $tbl,
                     ["","","","","", "",  "", "", "@style=text-align:right"]
                 )
-
             );
             return $e;
         });
@@ -186,7 +179,6 @@ class PhoreSchedulerModule implements AppModule
         /**
          * Scheduler overview
          */
-
 
         $app->addPage("{$this->startRoute}/scheduler", function (App $app, Request $request) {
 
@@ -210,10 +202,11 @@ class PhoreSchedulerModule implements AppModule
                 }
             }
 
-            $jobInfo = $scheduler->getJobInfo();
+            $filterStatus = $request->GET->get("status", null);
 
+            $jobList = $scheduler->getJobOverview($filterStatus);
 
-            $tbl = phore_array_transform($jobInfo, function ($index, $ji) {
+            $tbl = phore_array_transform($jobList, function ($index, $ji) {
 
                 return [
                     $index + 1,
@@ -226,9 +219,9 @@ class PhoreSchedulerModule implements AppModule
                         ", Running:",
                         fhtml(["a @href=?" => "{$ji["tasks_running"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=running"]),
                         ", Failed:",
-                        fhtml(["a @href=?" => "{$ji["nSuccessfulTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=failed"]),
+                        fhtml(["a @href=?" => "{$ji["nFailedTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=failed"]),
                         ", Success:",
-                        fhtml(["a @href=?" => "{$ji["nFailedTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
+                        fhtml(["a @href=?" => "{$ji["nSuccessfulTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
                         ")"
                     ],
                     gmdate("Y-m-d H:i:s", $ji["runAtTs"]) . "GMT",
@@ -253,7 +246,6 @@ class PhoreSchedulerModule implements AppModule
             );
 
             return $e;
-
 
         },  new NaviButtonWithIcon("Scheduler", "fas fa-clock"));
     }
