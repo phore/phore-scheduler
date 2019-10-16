@@ -258,9 +258,6 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->log->notice("Starting in background mode.");
             try {
                 $this->runNext();
-//                if (!$this->runNext()) {
-//                    sleep(1);
-//                }
             } catch (\Exception $e) {
                 $this->log->alert("Exception running scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
                 sleep(10);
@@ -334,7 +331,6 @@ class PhoreScheduler implements LoggerAwareInterface
     public function getJobDetails(string $jobId=null, string $filterStatus=null)
     {
         $return = [];
-        $tasks = [];
         $job = $this->connector->getJobById($jobId);
         if($job === null) {
             return $return;
@@ -355,7 +351,11 @@ class PhoreScheduler implements LoggerAwareInterface
                 $tasks = $this->connector->getFinishedTasks($jobId);
                 break;
             default:
-                $tasks = array_merge($this->connector->getPendingTasks($jobId), $this->connector->getRunningTasks($jobId), $this->connector->getFinishedTasks($jobId));
+                $tasks = array_merge(
+                    $this->connector->getPendingTasks($jobId),
+                    $this->connector->getRunningTasks($jobId),
+                    $this->connector->getFinishedTasks($jobId)
+                );
         }
 
         $return["tasks"] = [];

@@ -331,9 +331,14 @@ class PhoreSchedulerRedisConnector
             throw new \Exception("Job has to be cancelled.");
         }
         if($this->countRunningTasks($jobId) > 0) {
-            //if job has running tasks let them finish first
-            return false;
-            throw new \Exception("Job has running tasks.");
+            //if job has running tasks let them finish first or cancel on timeout
+            $tasks = $this->getRunningTasks($jobId);
+            foreach ($tasks as $task) {
+                if($task->startTime + $task->timeout > microtime(true)) {
+                    return false;
+                    throw new \Exception("Job has running tasks.");
+                }
+            }
         }
         $keys = $this->redis->keys($jobId."*");
         $this->deleteKeys($keys);
