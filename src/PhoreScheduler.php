@@ -266,7 +266,9 @@ class PhoreScheduler implements LoggerAwareInterface
         while(true) {
             $this->log->notice("Starting in background mode.");
             try {
-                $this->runNext();
+                if($this->runNext() === false) { //sleep when no job
+                    usleep(200000);
+                }
             } catch (\Exception $e) {
                 $this->log->alert("Exception running scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
                 sleep(10);
