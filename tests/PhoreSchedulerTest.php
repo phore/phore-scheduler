@@ -59,7 +59,7 @@ class PhoreSchedulerTest extends TestCase
         $this->assertEquals(true, $s->runNext());
         $finTasks = $s->getConnector()->getFinishedTasks($jobId);
         $this->assertEquals($taskId, $finTasks[0]->taskId);
-        $this->assertEquals("i:108;", $finTasks[0]->return);
+        $this->assertEquals("108", $finTasks[0]->return);
 
     }
 
