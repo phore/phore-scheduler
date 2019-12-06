@@ -44,9 +44,13 @@ class PhoreSchedulerJobAccessor
         return $this;
     }
 
-    public function save()
+    /**
+     * @return PhoreSchedulerJob
+     */
+    public function save() : PhoreSchedulerJob
     {
         $this->scheduler->_createJob($this->job, $this->tasks);
+        return $this->job;
     }
 
     /**
