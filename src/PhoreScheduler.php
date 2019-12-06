@@ -184,7 +184,7 @@ class PhoreScheduler implements LoggerAwareInterface
         try {
             $return = ($this->commands[$task->command])($task->arguments);
             $task->endTime = microtime(true);
-            $task->return = phore_serialize($return);
+            $task->return = $return;
             $task->status = PhoreSchedulerTask::STATUS_OK;
             $this->connector->updateTask($job->jobId, $task);
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);

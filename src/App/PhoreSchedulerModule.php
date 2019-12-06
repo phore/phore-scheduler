@@ -77,7 +77,7 @@ class PhoreSchedulerModule implements AppModule
                         [ "Remaining Retries", $task["nRetries"] ],
                         [ "Command", (string)$task["command"] ],
                         [ "Arguments", ["pre @mb-0" => (string)trim (print_r($task["arguments"], true))] ],
-                        [ "Return Value", (string)$task["return"] ],
+                        [ "Return Value", ["pre @mb-0" => (string)trim (print_r($task["return"], true))] ],
                         [ "Message", ["pre" => (string)$task["message"]] ]
                     ],
                     ["","",""]
