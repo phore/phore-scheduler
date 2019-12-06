@@ -17,7 +17,7 @@ use Phore\StatusPage\StatusPageApp;
 
 require __DIR__ . "/../vendor/autoload.php";
 
-$app = new StatusPageApp("TaDiS", "/admin");
+$app = new StatusPageApp("PhoreScheduler", "/admin");
 
 $app->define("phoreScheduler", function() {
     $connector = new PhoreSchedulerRedisConnector("redis");
