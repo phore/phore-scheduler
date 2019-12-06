@@ -227,7 +227,7 @@ class PhoreSchedulerModule implements AppModule
                         fhtml(["a @href=?" => "{$ji["nSuccessfulTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
                         ")"
                     ],
-                    gmdate("Y-m-d H:i:s", $ji["runAtTs"]) . "GMT",
+                    $ji["runAtTs"],//gmdate("Y-m-d H:i:s", $ji["runAtTs"]) . "GMT",
                     [
                         fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"]),
                         fhtml(["a @href=? @btn @btn-danger" => "Cancel"], ["{$this->startRoute}/scheduler?mode=cancel&jobId={$ji["jobId"]}"]),
