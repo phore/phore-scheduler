@@ -119,7 +119,7 @@ class PhoreScheduler implements LoggerAwareInterface
         if($job->nRunningTasks > 0) {
             return false;
         }
-        if($job->nSuccessfulTasks === $job->nTasks && $job->status !== PhoreSchedulerJob::STATUS_OK) {
+        if($this->connector->getTasksSuccessCount($jobId) === $job->nTasks && $job->status !== PhoreSchedulerJob::STATUS_OK) {
             return false;
         }
 
@@ -151,7 +151,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $task->status = PhoreSchedulerTask::STATUS_FAILED;
             $job = $this->connector->getJobById($job->jobId);
             $job->status = PhoreSchedulerJob::STATUS_FAILED;
-            $job->nFailedTasks++;
+            $job->nFailedTasks = $this->connector->incrementTasksFailCount($job->jobId);;
             $this->connector->updateJob($job);
         }
         $this->connector->updateTask($job->jobId, $task);
@@ -189,7 +189,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->connector->updateTask($job->jobId, $task);
             $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
             $job = $this->connector->getJobById($job->jobId);
-            $job->nSuccessfulTasks++;
+            $job->nSuccessfulTasks = $this->connector->incrementTasksSuccessCount($job->jobId);
             $this->connector->updateJob($job);
         } catch (\Error $e) {
             $errorMsg = "Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString();
@@ -340,8 +340,8 @@ class PhoreScheduler implements LoggerAwareInterface
             $curJobInfo["tasks_pending"] = $this->connector->countPendingTasks($job->jobId);
             $curJobInfo["tasks_running"] = $this->connector->countRunningTasks($job->jobId);
             $curJobInfo["tasks_finished"] = $this->connector->countFinishedTasks($job->jobId);
-            $curJobInfo["tasks_ok"] = $job->nSuccessfulTasks;
-            $curJobInfo["tasks_failed"] = $job->nFailedTasks;
+            $curJobInfo["tasks_ok"] = $this->connector->getTasksSuccessCount($job->jobId);
+            $curJobInfo["tasks_failed"] = $this->connector->getTasksFailCount($job->jobId);
             $return[] = $curJobInfo;
         }
 

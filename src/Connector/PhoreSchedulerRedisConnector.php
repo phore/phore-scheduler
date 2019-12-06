@@ -29,6 +29,8 @@ class PhoreSchedulerRedisConnector
     const TASKS_PENDING = "_tasks_pending";
     const TASKS_RUNNING = "_tasks_running";
     const TASKS_DONE = "_tasks_done";
+    const TASKS_SUCCESS_COUNT = "_tasks_success_count";
+    const TASKS_FAIL_COUNT = "_tasks_fail_count";
 
     public function __construct(string $redis_host)
     {
@@ -250,6 +252,36 @@ class PhoreSchedulerRedisConnector
     {
         $this->ensureConnectionCalled();
         return $this->redis->sMove($jobId . self::TASKS_RUNNING, $jobId . self::TASKS_DONE, $taskId);
+    }
+
+    public function incrementTasksSuccessCount($jobId) : int
+    {
+        return $this->redis->incr($jobId . self::TASKS_SUCCESS_COUNT);
+    }
+
+    public function incrementTasksFailCount($jobId) : int
+    {
+        return $this->redis->incr($jobId . self::TASKS_FAIL_COUNT);
+    }
+
+    public function getTasksSuccessCount($jobId) : int
+    {
+        return $this->redis->get($jobId . self::TASKS_SUCCESS_COUNT);
+    }
+
+    public function getTasksFailCount($jobId) : int
+    {
+        return $this->redis->get($jobId . self::TASKS_FAIL_COUNT);
+    }
+
+    public function setTasksSuccessCount($jobId) : int
+    {
+        return $this->redis->set($jobId . self::TASKS_SUCCESS_COUNT, 0);
+    }
+
+    public function setTasksFailCount($jobId) : int
+    {
+        return $this->redis->set($jobId . self::TASKS_FAIL_COUNT, 0);
     }
 
     /**
