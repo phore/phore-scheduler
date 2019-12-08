@@ -57,6 +57,11 @@ class PhoreSchedulerModule implements AppModule
                     $runTime = time() - $runTime;
             }
 
+            $jobStart = "--";
+            if ($task["jobStart"] != 0) {
+                $jobStart = (string)gmdate("Y-m-d H:i:s", (int) $task["jobStart"]) . "GMT";
+            }
+
             $e = fhtml();
             $e[] = pt()->card(
                 "Task Details for Task {$taskId}",
@@ -69,7 +74,7 @@ class PhoreSchedulerModule implements AppModule
                         [ "Host", (string)$task["execHost"] ],
                         [ "PID", (string)$task["execPid"] ],
                         [ "Job", fhtml(["a @href=?"  => "{$jobId}"], ["{$this->startRoute}/scheduler/{$jobId}"]) ],
-                        [ "Job Start Date", (string)gmdate("Y-m-d H:i:s", $task["jobStart"]) . "GMT (scheduled at ".(string)gmdate("Y-m-d H:i:s", $task["jobRunAt"]).")  " ],
+                        [ "Job Start Date", $jobStart . " (scheduled at ".(string)gmdate("Y-m-d H:i:s", (int) $task["jobRunAt"]).")  " ],
                         [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["startTime"]) . "GMT" ],
                         [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["endTime"]) . "GMT" ],
                         [ "Run time[s]", $runTime ],
@@ -165,7 +170,7 @@ class PhoreSchedulerModule implements AppModule
             );
             $filter = $filterStatus == null ? "none" : $filterStatus;
             $e[] = pt()->card(
-                "Scheduler Task list for Job {$jobId} Filter: {$filter}",
+                "Task list for job {$jobId}. Filter: {$filter}",
                 pt("table-striped table-hover")->basic_table(
                     [
                         "#", "TaksID", "Command", "Status", "Retries",
@@ -227,7 +232,7 @@ class PhoreSchedulerModule implements AppModule
                         fhtml(["a @href=?" => "{$ji["nSuccessfulTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
                         ")"
                     ],
-                    $ji["runAtTs"],//gmdate("Y-m-d H:i:s", $ji["runAtTs"]) . "GMT",
+                    gmdate("Y-m-d H:i:s", (int) $ji["runAtTs"]) . "GMT",
                     [
                         fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"]),
                         fhtml(["a @href=? @btn @btn-danger" => "Cancel"], ["{$this->startRoute}/scheduler?mode=cancel&jobId={$ji["jobId"]}"]),
