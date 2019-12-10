@@ -14,6 +14,7 @@ use Phore\MicroApp\AppModule;
 use Phore\MicroApp\Type\Request;
 use Phore\MicroApp\Type\RouteParams;
 use Phore\Scheduler\PhoreScheduler;
+use Phore\Scheduler\Type\PhoreSchedulerJob;
 use Phore\StatusPage\PageHandler\NaviButtonWithIcon;
 use Phore\StatusPage\StatusPageApp;
 
@@ -51,10 +52,15 @@ class PhoreSchedulerModule implements AppModule
             $runTime = "--";
             if ($task["startTime"] != null) {
                 $runTime = $task["startTime"];
-                if ($task["endTime"] !== null)
+                if ($task["endTime"] !== null) {
                     $runTime = $task["endTime"]- $runTime;
-                else
+                } else {
                     $runTime = time() - $runTime;
+                    if($runTime > $task['timeout']) {
+                        $runTime = "timeout (" . (int) $runTime . ")";
+                    }
+
+                }
             }
 
             $jobStart = "--";
@@ -131,13 +137,18 @@ class PhoreSchedulerModule implements AppModule
 
             });
 
+            $retryBtnDisabled = " @disabled";
             $runTime = "--";
             if ($jobInfo["startTime"] != null) {
                 $runTime = $jobInfo["startTime"];
                 if ($jobInfo["endTime"] === null)
                     $runTime = time() - $runTime;
-                else
+                else {
                     $runTime = $jobInfo["endTime"]- $runTime;
+                }
+            }
+            if($jobInfo["status"] === PhoreSchedulerJob::STATUS_FAILED && $jobInfo["endTime"] !== null) {
+                $retryBtnDisabled = "";
             }
             $jobTbl = [
                 (string)$jobInfo["jobId"],
@@ -152,7 +163,8 @@ class PhoreSchedulerModule implements AppModule
                 (string)$jobInfo["nPendingTasks"],
                 (string)$jobInfo["nRunningTasks"],
                 (string)$jobInfo["nFailedTasks"],
-                (string)$jobInfo["nSuccessfulTasks"]
+                (string)$jobInfo["nSuccessfulTasks"],
+                fhtml(["a @href=? @btn @btn-danger".$retryBtnDisabled => "Retry"], ["{$this->startRoute}/scheduler?mode=retry&jobId={$jobInfo["jobId"]}"])
             ];
 
 
@@ -162,7 +174,7 @@ class PhoreSchedulerModule implements AppModule
                 pt("table-striped table-hover")->basic_table(
                     [
                         "Id", "Name", "Status", "Scheduled", "Start", "End", "Runtime",
-                        "Continue on Failure", "Max Parallel Tasks", "Pending", "Running", "Failed", "Success"
+                        "Continue on Failure", "Max Parallel Tasks", "Pending", "Running", "Failed", "Success", ""
                     ],
                     [$jobTbl],
                     ["",""]
@@ -203,6 +215,10 @@ class PhoreSchedulerModule implements AppModule
                         if($scheduler->cancelJob($jobId))
                             $action = "cancelled job $jobId.";
                         break;
+                    case "retry":
+                        if($scheduler->retryJob($jobId))
+                            $action = "created new job from failed tasks.";
+                        break;
                     case "del":
                         if($scheduler->deleteJob($jobId))
                             $action = "deleted job $jobId.";
@@ -215,7 +231,12 @@ class PhoreSchedulerModule implements AppModule
             $jobList = $scheduler->getJobOverview($filterStatus);
 
             $tbl = phore_array_transform($jobList, function ($index, $ji) {
-
+                $btnCancelDisabled = "";
+                $btnDeleteDisabled = " @disabled";
+                if($ji["status"] === PhoreSchedulerJob::STATUS_CANCELLED) {
+                    $btnCancelDisabled = " @disabled";
+                    $btnDeleteDisabled = "";
+                }
                 return [
                     $index + 1,
                     $ji["jobId"],
@@ -235,8 +256,8 @@ class PhoreSchedulerModule implements AppModule
                     gmdate("Y-m-d H:i:s", (int) $ji["runAtTs"]) . "GMT",
                     [
                         fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"]),
-                        fhtml(["a @href=? @btn @btn-danger" => "Cancel"], ["{$this->startRoute}/scheduler?mode=cancel&jobId={$ji["jobId"]}"]),
-                        fhtml(["a @href=? @btn @btn-danger" => "Del"], ["{$this->startRoute}/scheduler?mode=del&jobId={$ji["jobId"]}"])
+                        fhtml(["a @href=? @btn @btn-danger".$btnCancelDisabled => "Cancel"], ["{$this->startRoute}/scheduler?mode=cancel&jobId={$ji["jobId"]}"]),
+                        fhtml(["a @href=? @btn @btn-danger".$btnDeleteDisabled => "Del"], ["{$this->startRoute}/scheduler?mode=del&jobId={$ji["jobId"]}"])
                     ]
                 ];
             });

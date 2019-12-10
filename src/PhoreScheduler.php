@@ -106,7 +106,29 @@ class PhoreScheduler implements LoggerAwareInterface
             $msg = $e;
         }
         return $msg;
+    }
 
+    public function retryJob($jobId) {
+        if($this->connector->getTasksFailCount($jobId) === 0)
+            return false;
+        $finishedTasks = $this->connector->getFinishedTasks($jobId);
+        $failedTasks = [];
+        foreach ($finishedTasks as $task) {
+            if($task->status === PhoreSchedulerTask::STATUS_FAILED) {
+                $clone = clone $task;
+                $clone->startTime = 0.0;
+                $clone->endTime = null;
+                $clone->status = null;
+                $clone->taskId = uniqid();
+                $clone->nRetries = 1;
+                $failedTasks[] = $clone;
+            }
+        }
+        $oldJob = $this->connector->getJobById($jobId);
+        $retryJob = new PhoreSchedulerJob();
+        $retryJob->name = $oldJob->name . "_retry";
+        $this->_createJob($retryJob, $failedTasks);
+        return true;
     }
 
     private function _validateFinishedJobState($jobId)
