@@ -379,6 +379,9 @@ class PhoreScheduler implements LoggerAwareInterface
             return $return;
         }
 
+        $job["tasks_ok"] = $this->connector->getTasksSuccessCount($job->jobId);
+        $job["tasks_failed"] = $this->connector->getTasksFailCount($job->jobId);
+
         $return = (array)$job;
 
         switch ($filterStatus) {

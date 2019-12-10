@@ -162,8 +162,8 @@ class PhoreSchedulerModule implements AppModule
                 (string)$jobInfo["nParallelTasks"],
                 (string)$jobInfo["nPendingTasks"],
                 (string)$jobInfo["nRunningTasks"],
-                (string)$jobInfo["nFailedTasks"],
-                (string)$jobInfo["nSuccessfulTasks"],
+                (string)$jobInfo["tasks_failed"],
+                (string)$jobInfo["tasks_ok"],
                 fhtml(["a @href=? @btn @btn-danger".$retryBtnDisabled => "Retry"], ["{$this->startRoute}/scheduler?mode=retry&jobId={$jobInfo["jobId"]}"])
             ];
 
@@ -248,9 +248,9 @@ class PhoreSchedulerModule implements AppModule
                         ", Running:",
                         fhtml(["a @href=?" => "{$ji["tasks_running"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=running"]),
                         ", Failed:",
-                        fhtml(["a @href=?" => "{$ji["nFailedTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=failed"]),
+                        fhtml(["a @href=?" => "{$ji["tasks_failed"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=failed"]),
                         ", Success:",
-                        fhtml(["a @href=?" => "{$ji["nSuccessfulTasks"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
+                        fhtml(["a @href=?" => "{$ji["tasks_ok"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
                         ")"
                     ],
                     gmdate("Y-m-d H:i:s", (int) $ji["runAtTs"]) . "GMT",
