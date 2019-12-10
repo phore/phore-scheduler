@@ -147,7 +147,7 @@ class PhoreSchedulerModule implements AppModule
                     $runTime = $jobInfo["endTime"]- $runTime;
                 }
             }
-            if($jobInfo["status"] === PhoreSchedulerJob::STATUS_FAILED && $jobInfo["endTime"] !== null) {
+            if($jobInfo["status"] === PhoreSchedulerJob::STATUS_FAILED && $jobInfo["endTime"] === null) {
                 $retryBtnDisabled = "";
             }
             $jobTbl = [
