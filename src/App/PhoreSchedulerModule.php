@@ -229,7 +229,9 @@ class PhoreSchedulerModule implements AppModule
             $filterStatus = $request->GET->get("status", null);
 
             $jobList = $scheduler->getJobOverview($filterStatus);
-
+            usort($jobList, function ($a, $b){
+                return $b['runAtTs'] <=> $a['runAtTs'];
+            });
             $tbl = phore_array_transform($jobList, function ($index, $ji) {
                 $btnCancelDisabled = "";
                 $btnDeleteDisabled = " @disabled";
