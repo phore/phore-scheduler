@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 PROGPATH="$( cd "$(dirname "$0")" ; pwd -P )"   # The absolute path to kickstart.sh
 #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -9,8 +9,9 @@ PROGPATH="$( cd "$(dirname "$0")" ; pwd -P )"   # The absolute path to kickstart
 # environment for this project.
 #
 # Config-File: .kick.yml
-# Website....: https://infracamp.org/getting-started/
-# Author.....: Matthias Leuffen <m@tth.es>
+# Website..: https://infracamp.org/getting-started/
+# Copyright: Matthias Leuffen <m@tth.es>
+# Released under GNU General Public License <http://www.gnu.org/licenses/gpl-3.0.html>
 #
 ################################################################################################
 ### DON'T CHANGE ANY VARIABLES HERE --- see ~/.kickstartconfig or ./.kickstartconfig instead ###
@@ -25,7 +26,7 @@ KICKSTART_DOCKER_RUN_OPTS=""
 # External Port bindings
 KICKSTART_PORTS="80:80/tcp;4000:4000/tcp;4100:4100/tcp;4200:4200/tcp;4000:4000/udp"
 
-# 1 = Don't try to download the images from the internet
+# 1 = Don't try to download the images fr/home/matthes/Projects/infracampom the internet
 OFFLINE_MODE=0
 
 # Specify the container name by yourself (switch of auto-detection)
@@ -39,6 +40,15 @@ KICKSTART_HOST_IP=
 
 # Where to mount the current project folder (default: /opt)
 DOCKER_MOUNT_PARAMS="-v $PROGPATH/:/opt/"
+
+# User to run inside the container (Default: 'user')
+KICKSTART_USER="user"
+
+
+# For WINDOWS (WSL) users only: Change this for mapping from wsl to docker4win. Execute this in linux shell:
+# `echo "KICKSTART_WIN_PATH=C:/" >> ~/.kickstartconfig`
+KICKSTART_WIN_PATH=""
+
 
 ############################
 ### CODE BELOW           ###
@@ -138,7 +148,7 @@ _KICKSTART_CURRENT_VERSION="1.2.0"
 ##
 # This variables can be overwritten by ~/.kickstartconfig
 #
-KICKSTART_WIN_PATH=""
+
 
 
 ask_user() {
@@ -203,7 +213,6 @@ fi
 if [ -e "$PROGPATH/.kickstartconfig" ]
 then
     echo "Loading $PROGPATH/.kickstartconfig (This is risky if you - abort if unsure)"
-    sleep 1
     # @todo Search for .kickstartconfig in gitignore to verify the user wants this.
     . $PROGPATH/.kickstartconfig
 fi
@@ -232,6 +241,12 @@ _usage() {
         $0 skel upgrade
             Upgrade to the latest kickstart version
 
+        $0 secrets list
+            List all secrets stored for this project
+
+        $0 secrets edit [secret_name]
+            Edit / create secret
+
         $0 wakeup
             Try to start a previous image with same container name (faster startup)
 
@@ -242,12 +257,15 @@ _usage() {
         $0 :debug       Execute the container in debug-mode (don't execute kick-commands)
 
     ARGUMENTS
-        -h                             Show this help
-        -t <tagName> --tag=<tagname>   Run container with this tag (development)
-        -u --unflavored                Run the container whithout running any scripts (develpment)
-        --offline                      Do not pull images nor ask for version upgrades
-        --no-tty                       Disable interactive tty
-
+        -h                    Show this help
+        -t, --tag=<tagname>   Run container with this tag (development)
+        -u, --unflavored      Run the container whithout running any scripts (develpment)
+            --offline         Do not pull images nor ask for version upgrades
+            --no-tty          Disable interactive tty
+        -e, --env ENV=value   Set environment variables
+        -v, --volume  list    Bind mount a volume
+        -f, --force           Restart / kill running containers
+        -r, --reset           Shutdown all services and restart stack services
     "
     exit 1
 }
@@ -299,10 +317,16 @@ run_shell() {
         echo "[kickstart.sh] Container '$CONTAINER_NAME' already running"
 
         choice="s"
-        if [[ "$ARGUMENT" == "" ]]
+
+        if [ "$forceKillContainer" -eq "1" ]
         then
-            read -r -p "Your choice: (S)hell, (r)estart, (a)bort?" choice
-        fi
+            choice="r"
+        else
+            if [[ "$ARGUMENT" == "" ]]
+            then
+                read -r -p "Your choice: (S)hell, (r)estart, (a)bort?" choice
+            fi
+        fi;
 
         case "$choice" in
             a)
@@ -325,8 +349,8 @@ run_shell() {
                 then
                     shellarg="kick $ARGUMENT"
                 fi;
-
-                docker exec $terminal --user user -e "DEV_TTYID=[SUB]" $CONTAINER_NAME $shellarg
+                echo -e $COLOR_NC;
+                docker exec $terminal --user $KICKSTART_USER -e "DEV_TTYID=[SUB]" $CONTAINER_NAME $shellarg
 
                 echo -e $COLOR_CYAN;
                 echo "<=== [kickstart.sh] Leaving container."
@@ -341,7 +365,11 @@ run_shell() {
    echo "[kickstart.s] Another container is already running!"
    docker ps
    echo ""
-   read -r -p "Your choice: (i)gnore/run anyway, (s)hell, (k)ill, (a)bort?:" choice
+   choice="k"
+   if [ "$forceKillContainer" -eq "0" ]
+   then
+      read -r -p "Your choice: (i)gnore/run anyway, (s)hell, (k)ill, (a)bort?:" choice
+   fi;
    case "$choice" in
       i|I)
         run_container
@@ -350,8 +378,7 @@ run_shell() {
       s|S)
         echo "===> [kickstart.sh] Opening new shell: "
         echo -e $COLOR_NC
-
-        docker exec $terminal --user user -e "DEV_TTYID=[SUB]" `docker ps | grep "/kickstart/" | cut -d" " -f1` /bin/bash
+        docker exec $terminal --user $KICKSTART_USER -e "DEV_TTYID=[SUB]" `docker ps | grep "/kickstart/" | cut -d" " -f1` /bin/bash
 
         echo -e $COLOR_CYAN;
         echo "<=== [kickstart.sh] Leaving container."
@@ -377,28 +404,47 @@ run_shell() {
 _ci_build() {
 
     echo "CI_BUILD: Building container.. (CI_* Env is preset by gitlab-ci-runner)";
+    [[ "$CI_REGISTRY" == "" ]] && echo "[Error deploy]: Environment CI_REGISTRY not set" && exit 1;
+    [[ "$CI_BUILD_NAME" == "" ]] && echo "CI_BUILD_NAME not set - setting default tag to 'latest'" && CI_BUILD_NAME="latest";
 
-    BUILD_TAG=":$CI_BUILD_NAME"
-    if [ "$CI_REGISTRY" == "" ]
-    then
-        echo "[Error deploy]: Environment CI_REGISTRY not set"
-        exit 1
-    fi
+    local imageName="$CI_REGISTRY_IMAGE:$CI_BUILD_NAME"
 
-    CMD="docker build --pull -t $CI_REGISTRY_IMAGE$BUILD_TAG -f ./Dockerfile ."
+    CMD="docker build --pull -t $imageName -f ./Dockerfile ."
     echo "[Building] Running '$CMD' (MODE1)";
     eval $CMD
 
-    echo "Logging in to: $CI_REGISTRY_USER @ $CI_REGISTRY"
-    echo "$CI_REGISTRY_PASSWORD" | docker login --username $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-    docker push $CI_REGISTRY_IMAGE$BUILD_TAG
-    echo "Push successful..."
+    if [ "$CI_REGISTRY_PASSWORD" != "" ]
+    then
+        echo "Logging in to: $CI_REGISTRY_USER @ $CI_REGISTRY"
+        echo "$CI_REGISTRY_PASSWORD" | docker login --username $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+    else
+        echo "No registry credentials provided in env CI_REGISTRY_PASSWORD - skipping docker login."
+    fi;
+
+    docker push $imageName
+    echo "Push successful (Image: $imageName)..."
     exit
 }
 
 
 
 DOCKER_OPT_PARAMS=$KICKSTART_DOCKER_RUN_OPTS;
+
+
+# Load .env before evaluating -e command line options
+if [ -e "$PROGPATH/.env" ]; then
+    echo "Adding docker environment from $PROGPATH/.env (Development only)"
+    DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS --env-file $PROGPATH/.env";
+elif [ -e "$PROGPATH/.env.dist" ] && [ "$#" == "0" ]; then
+    echo "An '.env' file is not existing but a '.env.dist' was found."
+    echo ""
+    echo "This normally indicates that you have to create a developers .env manually"
+    echo "in order to start the project."
+    echo ""
+    read -r -p "Hit (enter) to continue without .env file or CTRL-C to exit." choice
+fi
+
+
 
 
 
@@ -427,6 +473,7 @@ run_container() {
 		# For Windows users: Rewrite Path of bash to Windows path
 		# Will work only on drive C:/
 		PROGPATH="${PROGPATH/\/mnt\/c\//$KICKSTART_WIN_PATH}"
+		DOCKER_MOUNT_PARAMS="-v $PROGPATH/:/opt/"
 	fi
 
     docker rm $CONTAINER_NAME || true
@@ -437,15 +484,21 @@ run_container() {
     if [ -e "$_STACKFILE" ]; then
         _STACK_NETWORK_NAME=$CONTAINER_NAME
 
+        if [ $resetServices -eq 1 ]
+        then
+          echo "Reset Services. Leaving swarm..."
+          docker swarm leave --force
+        fi;
+
         echo "Startin in stack mode... (network: '$_STACK_NETWORK_NAME')"
         _NETWORKS=$(docker network ls | grep $_STACK_NETWORK_NAME | wc -l)
         echo nets: $_NETWORKS
         if [ $_NETWORKS -eq 0 ]; then
-            docker swarm init || true
+            docker swarm init --advertise-addr $KICKSTART_HOST_IP || true
             docker network create --attachable -d overlay $_STACK_NETWORK_NAME
         fi;
 
-        docker stack deploy --prune -c $_STACKFILE $CONTAINER_NAME
+        docker stack deploy --prune --with-registry-auth -c $_STACKFILE $CONTAINER_NAME
         DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS --network $_STACK_NETWORK_NAME"
     fi;
 
@@ -454,6 +507,15 @@ run_container() {
     if [ ! -t 1 ]
     then
         # Switch to non-interactive terminal (ci-build etc)
+        # For Gitlab Actions: $UID unset (use uid of path)
+        dev_uid=$(stat -c '%u' $PROGPATH)
+    fi;
+
+    if [ "$dev_uid" -eq "0" ]
+    then
+        # Never run a container as root user
+        # For Gitlab-CI: Gitlab-CI checks out everything world writable but as user root (0) => Set UID to normal user
+        # (otherwise composer / npm won't install)
         dev_uid=1000
     fi;
 
@@ -486,15 +548,30 @@ run_container() {
 
 
 
-
+forceKillContainer=0
 ARGUMENT="";
 # Parse the command parameters
 ARGUMENT="";
+resetServices=0;
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -t) USE_PIPF_VERSION="-t $2"; shift 2;;
     --tag=*)
         USE_PIPF_VERSION="-t ${1#*=}"; shift 1;;
+
+    -e|--env) DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -e '$2'"; shift 2;;
+
+    -v|--volume) DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -v '$2'"; shift 2;;
+
+    -f|--force)
+        forceKillContainer=1;
+        shift 1;
+        ;;
+
+    -r|--reset)
+        resetServices=1;
+        shift 1;
+        ;;
 
     --offline)
         OFFLINE_MODE=1; shift 1;;
@@ -547,6 +624,24 @@ while [ "$#" -gt 0 ]; do
         fi
         exit 0;;
 
+    secrets)
+        secretDir="$HOME/.kickstart/secrets/$CONTAINER_NAME"
+        mkdir -p $secretDir
+
+        [[ "$2" == "list" ]] && echo "Listing secrets from $secretDir:" && ls $secretDir && exit 0;
+
+        [[ "$2" != "edit" ]] && echo -e "Error: No secret specified\nUsage: $0 secrets list|edit [<secretname>]" && exit 1;
+
+        [[ "$3" == "" ]] && echo -e "Error: No secret specified\nUsage: $0 secrets list|edit [<secretname>]" && exit 1;
+
+        secretFile=$secretDir/$3
+
+        editor $secretFile
+        echo "Edit successful: $secretFile"
+
+        exit 0;;
+
+
     ci-build|--ci-build)
         _ci_build $2 $3
         exit0;;
@@ -580,17 +675,22 @@ then
     DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -v $HOME/.gitconfig:/home/user/.gitconfig";
 fi
 
-if [ -e "$HOME/.bash_history" ]
+if [ -e "$HOME/.git-credentials" ]
 then
-    echo "Mounting $HOME/.bash_history..."
-    DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -v $HOME/.bash_history:/home/user/.bash_history";
+    echo "Mounting $HOME/.git-credentials..."
+    DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -v $HOME/.git-credentials:/home/user/.git-credentials";
 fi
 
-if [ -e "$PROGPATH/.env" ]
+if [ -e "$HOME/.bash_history" ]
 then
-    echo "Adding docker environment from $PROGPATH/.env (Development only)"
-    DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS --env-file $PROGPATH/.env";
+    bashHistoryFile="$HOME/.kickstart/bash_history/$CONTAINER_NAME";
+    echo "Mounting containers bash-history from $bashHistroyFile..."
+    mkdir -p $(dirname $bashHistoryFile)
+    touch $bashHistoryFile
+    DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -v $bashHistoryFile:/home/user/.bash_history";
 fi
+
+
 
 secretsPath="$HOME/.kickstart/secrets/$CONTAINER_NAME"
 echo "Scanning for secrets in $secretsPath";
@@ -602,6 +702,16 @@ then
         DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -v '$secretsPath/$_cur_secret_name:/run/secrets/$_cur_secret_name' "
     done;
 fi;
+
+
+echo "Scanning env for KICKSECRET_*";
+for secret in $(env | grep ^KICKSECRET | sed 's/KICKSECRET_\([a-zA-Z0-9_]\+\).*/\1/'); do
+    secretName="KICKSECRET_$secret"
+    secretFile="/tmp/.kicksecret.$secretName"
+    echo ${!secretName} > $secretFile
+    echo "+ adding secret from env: $secretName > /run/secrets/$secret";
+    DOCKER_OPT_PARAMS="$DOCKER_OPT_PARAMS -v '$secretFile:/run/secrets/$secret' "
+done;
 
 
 # Ports to be exposed

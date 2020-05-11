@@ -135,12 +135,18 @@ class PhoreSchedulerRedisConnector
         return $this->redis->sMove(self::JOBS_PENDING, self::JOBS_DONE, $jobId);
     }
 
+    /**
+     * @return array|bool|mixed|string
+     */
     public function getRandomRunningJobId()
     {
         $this->ensureConnectionCalled();
         return $this->redis->sRandMember(self::JOBS_RUNNING);
     }
 
+    /**
+     * @return PhoreSchedulerJob[]
+     */
     public function getFinishedJobs()
     {
         $this->ensureConnectionCalled();
@@ -196,7 +202,7 @@ class PhoreSchedulerRedisConnector
         return  $this->redis->set($jobId . "_" . $task->taskId, $taskString);
     }
 
-    public function getTaskById($jobId, $taskId) : PhoreSchedulerTask
+    public function getTaskById($jobId, $taskId) : ?PhoreSchedulerTask
     {
         $this->ensureConnectionCalled();
         $task = phore_unserialize($this->redis->get($jobId ."_". $taskId), [PhoreSchedulerTask::class]);

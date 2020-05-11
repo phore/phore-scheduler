@@ -31,6 +31,12 @@ $app->addModule(new PhoreSchedulerModule(""));
 
 $app->addPage("/", function (PhoreScheduler $phoreScheduler, Request $request) {
 
+    $phoreScheduler->defineCommand("testRunFail", function(array $args) {
+        throw new \Error("test failed");
+    });
+    $phoreScheduler->defineCommand("testRunSuccess", function(array $args) {
+        return "test successful";
+    });
     $msg = "";
     if ($request->GET->has("create")) {
         $testJobRun = $phoreScheduler->createJob("test Run");
@@ -42,13 +48,16 @@ $app->addPage("/", function (PhoreScheduler $phoreScheduler, Request $request) {
         $testJobQueue->addTask("testRunSuccess", ["arg1"=>"argval1"], 1, 10);
         $testJobQueue->save();
         $msg = "Job Created";
-        $phoreScheduler->defineCommand("testRunFail", function(array $args) {
-            throw new \Error("test failed");
-        });
-        $phoreScheduler->defineCommand("testRunSuccess", function(array $args) {
-            return "test successful";
-        });
+
         $phoreScheduler->runNext();
+    }
+
+    if($request->GET->has("run")) {
+        $phoreScheduler->runNext();
+    }
+
+    if($request->GET->has("clear")) {
+        $phoreScheduler->cleanUp(0, true);
     }
 
 
