@@ -38,6 +38,21 @@ class PhoreSchedulerRedisConnector
         $this->redisHost = $redis_host;
     }
 
+    /**
+     * Get information about redis
+     * @return array
+     */
+    public function status() : array
+    {
+        $stats['gmdate'] = gmdate("Y-m-d H:i:s");
+        $stats['connection'] = ($this->redis->isConnected() ? "" : "not ") . "connected";
+        $stats['nKeys'] = $this->redis->dbSize();
+        $stats['lastError'] = $this->redis->getLastError();
+        $stats['slowLogs'] = $this->redis->slowLog('get', 5);
+        $stats['info'] = $this->redis->info();
+        return $stats;
+    }
+
 
     /**
      * Reconnect with separate connection (e.g. Multithreading)

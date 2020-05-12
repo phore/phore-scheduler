@@ -204,11 +204,11 @@ class PhoreSchedulerModule implements AppModule
             $scheduler = $app->get($this->diName);
             if ( ! $scheduler instanceof PhoreScheduler)
                 throw new \InvalidArgumentException("{$this->diName} should be from type PhoreScheduler");
-            $connectionStatus = $scheduler->getConnector()->isConnected();
-            return [
-                "scheduler status" => ($connectionStatus===true ? "" : "not ") . "connected",
-                "gmdate" => gmdate("Y-m-d H:i:s"),
-            ];
+            $stats =  $scheduler->getConnector()->status();
+            return ["pre @mb-0" => (string)trim (print_r($stats, true))];
+            return ;
+            print_r($stats);
+            return [];
         });
 
         $app->addPage("{$this->startRoute}/scheduler", function (App $app, Request $request) {
