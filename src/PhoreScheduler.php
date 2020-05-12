@@ -292,10 +292,13 @@ class PhoreScheduler implements LoggerAwareInterface
         foreach ($finishedJobs as $job) {
             if($job->endTime+$age > microtime(true))
                 continue;
-            if($onlySuccess && $job->status !== PhoreSchedulerJob::STATUS_OK)
+            if($job->status === PhoreSchedulerJob::STATUS_CANCELLED) {
+                $this->deleteJob($job->jobId);
                 continue;
+            }
+            if($onlySuccess && $job->status !== PhoreSchedulerJob::STATUS_OK)
+            continue;
             $this->cancelJob($job->jobId);
-            $this->deleteJob($job->jobId);
         }
         $nJobsDeleted = count($finishedJobs);
         $this->log->notice("Cleared $nJobsDeleted finished jobs.");
