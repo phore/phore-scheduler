@@ -65,7 +65,7 @@ class PhoreSchedulerModule implements AppModule
 
             $jobStart = "--";
             if ($task["jobStart"] != 0) {
-                $jobStart = (string)gmdate("Y-m-d H:i:s", (int) $task["jobStart"]) . "GMT";
+                $jobStart = (string)gmdate("Y-m-d H:i:s", (int) $task["jobStart"]) . "UTC";
             }
 
             $e = fhtml();
@@ -81,8 +81,8 @@ class PhoreSchedulerModule implements AppModule
                         [ "PID", (string)$task["execPid"] ],
                         [ "Job", fhtml(["a @href=?"  => "{$jobId}"], ["{$this->startRoute}/scheduler/{$jobId}"]) ],
                         [ "Job Start Date", $jobStart . " (scheduled at ".(string)gmdate("Y-m-d H:i:s", (int) $task["jobRunAt"]).")  " ],
-                        [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["startTime"]) . "GMT" ],
-                        [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["endTime"]) . "GMT" ],
+                        [ "Start Date",  $task["startTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["startTime"]) . "UTC" ],
+                        [ "End Date", $task["endTime"] == "" ? "-- " : (string)gmdate("Y-m-d H:i:s", (int) $task["endTime"]) . "UTC" ],
                         [ "Run time[s]", $runTime ],
                         [ "Timeout[s]", $task["timeout"] ],
                         [ "Remaining Retries", $task["nRetries"] ],
@@ -266,7 +266,7 @@ class PhoreSchedulerModule implements AppModule
                         fhtml(["a @href=?" => "{$ji["tasks_ok"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
                         ")"
                     ],
-                    gmdate("Y-m-d H:i:s", (int) $ji["runAtTs"]) . "GMT",
+                    gmdate("Y-m-d H:i:s", (int) $ji["runAtTs"]) . "UTC",
                     [
                         fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"]),
                         fhtml(["a @href=? @btn @btn-danger".$btnCancelDisabled => "Cancel"], ["{$this->startRoute}/scheduler?mode=cancel&jobId={$ji["jobId"]}"]),
