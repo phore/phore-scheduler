@@ -241,13 +241,17 @@ class PhoreScheduler implements LoggerAwareInterface
                 $job->status = PhoreSchedulerJob::STATUS_RUNNING;
                 $job->startTime = microtime(true);
                 $this->connector->updateJob($job);
+                $this->log->debug("moved pending job '{$job->jobId}' to running");
                 break;
             }
         }
 
         $jobId = $this->connector->getRandomRunningJobId();
         if($jobId === false) {
+            $this->log->debug("No running jobs");
             return false;
+        } else {
+            $this->log->debug("Start working on job '{$jobId}'.");
         }
         $job = $this->connector->getJobById($jobId);
 
@@ -305,12 +309,12 @@ class PhoreScheduler implements LoggerAwareInterface
 
     public function run()
     {
+        $this->log->notice("Starting in background mode.");
         while(true) {
-            $this->log->notice("Starting in background mode.");
             try {
                 // when no jobs are available clean up and sleep
                 if($this->runNext() === false) { //sleep when no job
-                    $this->log->notice("No jobs to process. Starting cleanup.");
+                    $this->log->debug("No jobs to process. Starting cleanup.");
                     $this->cleanUp();
                     usleep(200000);
                 }
