@@ -48,7 +48,7 @@ if ($opts->has("autoload")) {
 
 
 $sched = PhoreScheduler::GetSingleton();
-$sched->setLogger(phore_log());
+//$sched->setLogger(phore_log());
 if ($opts->has("d")) {
     if ($opts->get("d") > 1) {
         PhoreSimpleParallelRunner::Run(function () use ($sched) {
