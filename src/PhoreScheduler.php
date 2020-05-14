@@ -186,18 +186,24 @@ class PhoreScheduler implements LoggerAwareInterface
         }
     }
 
-    private function _runNextTask(PhoreSchedulerJob $job)
+    /**
+     * @param PhoreSchedulerJob $job
+     * @return bool FALSE if no pending tasks were found, else TRUE
+     * @throws \Exception
+     */
+    private function _runNextTask(PhoreSchedulerJob $job) : bool
     {
         $task = $this->connector->getFirstPendingTask($job->jobId);
         if($task === null) {
-            return;
+            return false;
         }
         if(!$this->connector->addTaskToRunning($job->jobId, $task->taskId))
-            return;
+            return true;
 
         $task->execHost = gethostname();
         $task->execPid = getmypid();
         $task->startTime = microtime(true);
+        $task->endTime = null; // reset in case this task has run before and failed
         $this->connector->updateTask($job->jobId, $task);
 
         if(!$this->connector->removeTaskFromPending($job->jobId, $task->taskId))
@@ -262,6 +268,12 @@ class PhoreScheduler implements LoggerAwareInterface
         }
 
         if(!$this->_runNextTask($job)) {
+            //no pending tasks were found. If all tasks are finished we can try to move this Job to done
+            //also make sure the job has a 'done' status (STATUS_CANCELLED, STATUS_FAILED or STATUS_OK)
+            $finishedStatus = [PhoreSchedulerJob::STATUS_CANCELLED, PhoreSchedulerJob::STATUS_FAILED, PhoreSchedulerJob::STATUS_OK];
+            if($this->connector->countFinishedTasks($jobId) === $job->nTasks && in_array($job->status, $finishedStatus)) {
+                    $this->connector->moveRunningJobToDone($jobId);
+            }
             return true;
         }
 
@@ -293,17 +305,21 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->connector->connect();
 
         $finishedJobs = $this->connector->getFinishedJobs();
-        $this->log->debug("Cleaning up " . count($finishedJobs) . "finished jobs.");
+        $deletedJobs = 0;
         foreach ($finishedJobs as $job) {
             if($job->endTime+$age > microtime(true))
                 continue;
             if($job->status === PhoreSchedulerJob::STATUS_CANCELLED) {
-                $this->deleteJob($job->jobId);
+                if($this->deleteJob($job->jobId) === true)
+                    $deletedJobs++;
                 continue;
             }
             if($onlySuccess && $job->status !== PhoreSchedulerJob::STATUS_OK)
                 continue;
             $this->cancelJob($job->jobId);
+        }
+        if($deletedJobs > 0) {
+            $this->log->notice("CleanUp deleted $deletedJobs out of " . count($finishedJobs) . " finished jobs.");
         }
     }
 
