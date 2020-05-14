@@ -289,6 +289,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->connector->connect();
 
         $finishedJobs = $this->connector->getFinishedJobs();
+        $this->log->notice("Cleaning up " . count($finishedJobs) . "finished jobs.");
         foreach ($finishedJobs as $job) {
             if($job->endTime+$age > microtime(true))
                 continue;
@@ -297,12 +298,9 @@ class PhoreScheduler implements LoggerAwareInterface
                 continue;
             }
             if($onlySuccess && $job->status !== PhoreSchedulerJob::STATUS_OK)
-            continue;
+                continue;
             $this->cancelJob($job->jobId);
         }
-        $nJobsDeleted = count($finishedJobs);
-        $this->log->notice("Cleared $nJobsDeleted finished jobs.");
-
     }
 
     public function run()
@@ -312,6 +310,7 @@ class PhoreScheduler implements LoggerAwareInterface
             try {
                 // when no jobs are available clean up and sleep
                 if($this->runNext() === false) { //sleep when no job
+                    $this->log->notice("No jobs to process. Starting cleanup.");
                     $this->cleanUp();
                     usleep(200000);
                 }
