@@ -293,7 +293,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->connector->connect();
 
         $finishedJobs = $this->connector->getFinishedJobs();
-        $this->log->notice("Cleaning up " . count($finishedJobs) . "finished jobs.");
+        $this->log->debug("Cleaning up " . count($finishedJobs) . "finished jobs.");
         foreach ($finishedJobs as $job) {
             if($job->endTime+$age > microtime(true))
                 continue;
