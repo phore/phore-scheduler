@@ -219,8 +219,8 @@ class PhoreSchedulerModule implements AppModule
 
             $action = "";
             $jobId = $request->GET->get("jobId", false);
+            $mode = $request->GET->get("mode", false);
             if($jobId !== false) {
-                $mode = $request->GET->get("mode", false);
                 switch ($mode) {
                     case "cancel":
                         if($scheduler->cancelJob($jobId))
@@ -235,6 +235,8 @@ class PhoreSchedulerModule implements AppModule
                             $action = "deleted job $jobId.";
                         break;
                 }
+            } else if($mode === "cleanup") {
+                $scheduler->cleanUp(300, false);
             }
 
             $filterStatus = $request->GET->get("status", null);
@@ -275,21 +277,16 @@ class PhoreSchedulerModule implements AppModule
                 ];
             });
 
-
             $e = fhtml();
             $e[] = pt()->card(
                 "Scheduler $action",
                 pt("table-striped table-hover")->basic_table(
-                    ["#", "JobID", "Job Name", "Status", "Task Status", "Scheduled at", ""],
+                    ["#", "JobID", "Job Name", "Status", "Task Status", "Scheduled at", fhtml(["a @href=? @btn @btn-danger" => "Clear finished jobs (>5m)"], ["{$this->startRoute}/scheduler?mode=cleanup"])],
                     $tbl,
                     ["","","", "", "", "", "@style=text-align:right"]
                 )
-
             );
-
             return $e;
-
         },  new NaviButtonWithIcon("Scheduler", "fas fa-clock"));
     }
-
 }

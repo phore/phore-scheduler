@@ -163,4 +163,15 @@ class PhoreSchedulerTest extends TestCase
 
     }
 
+    public function testFailEmptyJob()
+    {
+        $s = $this->s;
+        $job1 = $s->createJob("job1");
+        $job1->save();
+        $this->assertEquals(false, $s->runNext());
+        $this->assertEquals(0, $s->getConnector()->countPendingJobs());
+        $this->assertEquals(0, $s->getConnector()->countRunningJobs());
+        $this->assertEquals(1, $s->getConnector()->countFinishedJobs());
+    }
+
 }
