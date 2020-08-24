@@ -13,6 +13,7 @@ use Phore\MicroApp\Type\QueryParams;
 use Phore\MicroApp\Type\Request;
 use Phore\Scheduler\App\PhoreSchedulerModule;
 use Phore\Scheduler\Connector\PhoreSchedulerRedisConnector;
+use Phore\Scheduler\Type\PhoreSchedulerJob;
 use Phore\StatusPage\StatusPageApp;
 
 require __DIR__ . "/../vendor/autoload.php";
@@ -39,6 +40,9 @@ $app->addPage("/", function (PhoreScheduler $phoreScheduler, Request $request) {
     });
     $msg = "";
     if ($request->GET->has("create")) {
+        $testJobRun = $phoreScheduler->createJob("test Success");
+        $testJobRun->addTask("testRunSuccess", ["arg1"=>"argval1"], 1, 10);
+        $testJobRun->save();
         $testJobRun = $phoreScheduler->createJob("test Run");
         $testJobRun->addTask("testRunFail", ["arg1"=>"argval1"], 1, 10);
         $testJobRun->addTask("testRunSuccess", ["arg1"=>"argval1"], 1, 10);

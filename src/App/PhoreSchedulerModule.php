@@ -279,9 +279,18 @@ class PhoreSchedulerModule implements AppModule
 
             $e = fhtml();
             $e[] = pt()->card(
+                null,
+                [
+                    fhtml(["a @href=? @btn @btn-primary" => "Show Default"], ["{$this->startRoute}/scheduler"]),
+                    fhtml(["a @href=? @btn @btn-primary" => "Show All"], ["{$this->startRoute}/scheduler?status=all"]),
+                    fhtml(["a @href=? @btn @btn-primary" => "Show Cancelled"], ["{$this->startRoute}/scheduler?status=cancelled"]),
+                    fhtml(["a @href=? @btn @btn-danger" => "Clear finished jobs"], ["{$this->startRoute}/scheduler?mode=cleanup"])
+                ],
+                null);
+            $e[] = pt()->card(
                 "Scheduler $action",
                 pt("table-striped table-hover")->basic_table(
-                    ["#", "JobID", "Job Name", "Status", "Task Status", "Scheduled at", fhtml(["a @href=? @btn @btn-danger" => "Clear finished jobs (>5m)"], ["{$this->startRoute}/scheduler?mode=cleanup"])],
+                    ["#", "JobID", "Job Name", "Status", "Task Status", "Scheduled at", ""],
                     $tbl,
                     ["","","", "", "", "", "@style=text-align:right"]
                 )

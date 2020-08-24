@@ -160,12 +160,20 @@ class PhoreSchedulerRedisConnector
     }
 
     /**
+     * @param array $jobStatus
      * @return PhoreSchedulerJob[]
      */
-    public function getFinishedJobs()
-    {
+    public function getFinishedJobs(
+        array $jobStatus = [
+            PhoreSchedulerJob::STATUS_FAILED,
+            PhoreSchedulerJob::STATUS_CANCELLED,
+            PhoreSchedulerJob::STATUS_OK,
+            PhoreSchedulerJob::STATUS_PENDING,
+            PhoreSchedulerJob::STATUS_RUNNING
+        ]
+    ) {
         $this->ensureConnectionCalled();
-        return $this->getJobList(self::JOBS_DONE);
+        return $this->getJobList(self::JOBS_DONE, $jobStatus);
     }
 
     /**
@@ -188,13 +196,23 @@ class PhoreSchedulerRedisConnector
 
     /**
      * @param string $key
+     * @param array $jobStatus
      * @return PhoreSchedulerJob[]
      */
-    private function getJobList(string $key)
-    {
+    private function getJobList(
+        string $key,
+        array $jobStatus = [
+            PhoreSchedulerJob::STATUS_FAILED,
+            PhoreSchedulerJob::STATUS_CANCELLED,
+            PhoreSchedulerJob::STATUS_OK,
+            PhoreSchedulerJob::STATUS_PENDING,
+            PhoreSchedulerJob::STATUS_RUNNING
+        ]) {
         $jobs = [];
         foreach ($this->redis->sMembers($key) as $jobId) {
-            $jobs[] = $this->getJobById($jobId);
+            $job = $this->getJobById($jobId);
+            if(in_array($job->status, $jobStatus))
+            $jobs[] = $job;
         }
         return $jobs;
     }

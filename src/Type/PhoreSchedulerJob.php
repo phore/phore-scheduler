@@ -51,6 +51,7 @@ class PhoreSchedulerJob
     {
         $this->jobId = uniqid();
         $this->runAtTs = microtime(true);
+        $this->status = self::STATUS_PENDING;
     }
 
 }

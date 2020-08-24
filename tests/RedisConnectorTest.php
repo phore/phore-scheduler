@@ -35,7 +35,6 @@ class RedisConnectorTest extends TestCase
     public function testJobIsCreated()
     {
         $c = $this->c;
-
         $c->addJob($j = new PhoreSchedulerJob());
         $c->addTask($j, new PhoreSchedulerTask(""));
 

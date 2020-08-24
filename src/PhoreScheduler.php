@@ -382,11 +382,18 @@ class PhoreScheduler implements LoggerAwareInterface
             case "finished":
                 $jobs = $this->connector->getFinishedJobs();
                 break;
-            default:
+            case "all":
                 $jobs = array_merge(
                     $this->connector->getPendingJobs(),
                     $this->connector->getRunningJobs(),
                     $this->connector->getFinishedJobs()
+                );
+                break;
+            default:
+                $jobs = array_merge(
+                    $this->connector->getPendingJobs(),
+                    $this->connector->getRunningJobs(),
+                    $this->connector->getFinishedJobs([PhoreSchedulerJob::STATUS_FAILED])
                 );
         }
 
