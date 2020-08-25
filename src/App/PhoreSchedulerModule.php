@@ -283,6 +283,7 @@ class PhoreSchedulerModule implements AppModule
                 [
                     fhtml(["a @href=? @btn @btn-primary" => "Show Default"], ["{$this->startRoute}/scheduler"]),
                     fhtml(["a @href=? @btn @btn-primary" => "Show All"], ["{$this->startRoute}/scheduler?status=all"]),
+                    fhtml(["a @href=? @btn @btn-primary" => "Show Failed"], ["{$this->startRoute}/scheduler?status=failed"]),
                     fhtml(["a @href=? @btn @btn-primary" => "Show Cancelled"], ["{$this->startRoute}/scheduler?status=cancelled"]),
                     fhtml(["a @href=? @btn @btn-danger" => "Clear finished jobs"], ["{$this->startRoute}/scheduler?mode=cleanup"])
                 ],
