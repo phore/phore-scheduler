@@ -342,7 +342,8 @@ class PhoreScheduler implements LoggerAwareInterface
                 if($this->runNext() === false) { //sleep when no job
                     $this->log->debug("No jobs to process. Starting cleanup.");
                     $this->cleanUp();
-                    usleep(200000);
+                    $rnd = random_int(10, 50);
+                    usleep($rnd * 100000);
                 }
             } catch (\Exception $e) {
                 $this->log->alert("Exception running scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
