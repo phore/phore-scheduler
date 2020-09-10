@@ -211,6 +211,8 @@ class PhoreSchedulerRedisConnector
         $jobs = [];
         foreach ($this->redis->sMembers($key) as $jobId) {
             $job = $this->getJobById($jobId);
+            if(empty($job))
+                continue;
             if(in_array($job->status, $jobStatus))
             $jobs[] = $job;
         }
