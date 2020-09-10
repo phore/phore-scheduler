@@ -207,9 +207,11 @@ class PhoreSchedulerRedisConnector
             PhoreSchedulerJob::STATUS_OK,
             PhoreSchedulerJob::STATUS_PENDING,
             PhoreSchedulerJob::STATUS_RUNNING
-        ]) {
+        ], int $limit = 1000) {
         $jobs = [];
-        foreach ($this->redis->sMembers($key) as $jobId) {
+        foreach ($this->redis->sMembers($key) as $i => $jobId) {
+            if($i > $limit)
+                break;
             $job = $this->getJobById($jobId);
             if(empty($job))
                 continue;
@@ -383,7 +385,7 @@ class PhoreSchedulerRedisConnector
         }
     }
 
-    public function moveRunningTaskToPending($jobId, $taskId)
+    public function moveRunningTaskToPending($jobId, $taskId): bool
     {
         if($this->redis->rPush($jobId . self::TASKS_PENDING, $taskId) === false) {
             return false;
@@ -391,6 +393,7 @@ class PhoreSchedulerRedisConnector
         if($this->redis->sRem($jobId . self::TASKS_RUNNING, $taskId) !== 1) {
             throw new \Exception("failed to remove running task.");
         }
+        return true;
     }
 
     public function deleteJobById($jobId) {

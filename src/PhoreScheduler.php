@@ -166,10 +166,12 @@ class PhoreScheduler implements LoggerAwareInterface
         $task->message .= $errorMsg;
 
         if($task->nRetries > 0) {
-            $this->connector->moveRunningTaskToPending($job->jobId, $task->taskId);
+            if(!$this->connector->moveRunningTaskToPending($job->jobId, $task->taskId))
+                return false;
             $task->nRetries--;
         } else {
-            $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
+            if(!$this->connector->moveRunningTaskToDone($job->jobId, $task->taskId))
+                return false;
             $task->status = PhoreSchedulerTask::STATUS_FAILED;
             $job = $this->connector->getJobById($job->jobId);
             $job->status = PhoreSchedulerJob::STATUS_FAILED;
