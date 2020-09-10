@@ -208,8 +208,10 @@ class PhoreScheduler implements LoggerAwareInterface
         $task->endTime = null; // reset in case this task has run before and failed
         $this->connector->updateTask($job->jobId, $task);
 
-        if(!$this->connector->removeTaskFromPending($job->jobId, $task->taskId))
-            throw new \Exception("Failed to remove pending task after copying to run.");
+        if(!$this->connector->removeTaskFromPending($job->jobId, $task->taskId)) {
+            $this->log->debug("Failed to remove pending task after copying to run.");
+            return true;
+        }
 
         try {
             $return = ($this->commands[$task->command])($task->arguments);
@@ -217,7 +219,8 @@ class PhoreScheduler implements LoggerAwareInterface
             $task->return = $return;
             $task->status = PhoreSchedulerTask::STATUS_OK;
             $this->connector->updateTask($job->jobId, $task);
-            $this->connector->moveRunningTaskToDone($job->jobId, $task->taskId);
+            if(!$this->connector->moveRunningTaskToDone($job->jobId, $task->taskId))
+                return true;
             $job = $this->connector->getJobById($job->jobId);
             $job->nSuccessfulTasks = $this->connector->incrementTasksSuccessCount($job->jobId);
             $this->connector->updateJob($job);
