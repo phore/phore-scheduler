@@ -19,12 +19,12 @@
   },
   "require": {
     "php" : ">=7.2",
-    "phore/log": "dev-master",
-    "phore/core": "dev-master"
+    "phore/log": "*",
+    "phore/core": "*"
   },
   "require-dev": {
     "phpunit/phpunit": "*",
-    "phore/status-page": "dev-master"
+    "phore/status-page": "*"
 
   },
   "bin": [
