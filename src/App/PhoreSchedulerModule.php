@@ -185,7 +185,7 @@ class PhoreSchedulerModule implements AppModule
                 "Task list for job {$jobId}. Filter: {$filter}",
                 pt("table-striped table-hover")->basic_table(
                     [
-                        "#", "TaksID", "Command", "Status", "Retries",
+                        "#", "TaskID", "Command", "Status", "Retries",
                         "Start Time", "End Time", "RunTime", ""
                     ],
                     $tbl,

@@ -45,9 +45,9 @@ class PhoreSchedulerTask
 
     public $execPid;
 
-    public function __construct($command, $arguments = [], $retries = 2, $timeout = 1800)
+    public function __construct($command, $arguments = [], $retries = 2, $timeout = 1800, $taskIdPrefix = '')
     {
-        $this->taskId = uniqid();
+        $this->taskId = uniqid($taskIdPrefix);
         $this->command = $command;
         $this->arguments = $arguments;
         $this->nRetries = $retries;
