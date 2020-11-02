@@ -296,7 +296,14 @@ class PhoreScheduler implements LoggerAwareInterface
             return true;
         }
 
-        $job = $this->connector->getJobById($jobId); // get updated version in case status changed
+        // get updated version in case status changed
+        $job = $this->connector->getJobById($jobId);
+        // check if job has been unserialized
+        if(!$job instanceof PhoreSchedulerJob) {
+            $this->log->alert("Job $jobId could not be unserialized");
+            return true;
+        }
+
         if($job->status === PhoreSchedulerJob::STATUS_CANCELLED) {
             return true;
         }
@@ -351,7 +358,10 @@ class PhoreScheduler implements LoggerAwareInterface
                     usleep($rnd * 100000);
                 }
             } catch (\Exception $e) {
-                $this->log->alert("Exception running scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
+                $this->log->alert("Exception in scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
+                sleep(10);
+            } catch (\Error $err) {
+                $this->log->alert("Error in scheduler: " . $e->getMessage() . " (Restarting in 10sec)");
                 sleep(10);
             }
         }
