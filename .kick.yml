@@ -1,9 +1,14 @@
 # Kickstart container config file - see https://gitub.com/c7lab/kickstart
 # Run ./kickstart.sh to start a development-container for this project
 version: 1
-from: "infracamp/kickstart-flavor-gaia:testing"
+from: "nfra/kickstart-flavor-php:7.2"
 
-apache_fallback_resource: "/index.php"
+apache_document_root: /opt/www
+apache_vhost_config: |
+  FallbackResource /index.php
+
+env:
+  - "DEFAULT_ENV=${DEFAULT_ENV:-default}"
 
 command:
   init:

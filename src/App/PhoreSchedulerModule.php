@@ -117,20 +117,20 @@ class PhoreSchedulerModule implements AppModule
                 if ($value["startTime"] != null) {
                     $runTime = $value["startTime"];
                     if ($value["endTime"] === null)
-                        $runTime = time() - $runTime;
+                        $runTime = round(time() - $runTime, 2);
                     else
-                        $runTime = $value["endTime"]- $runTime;
+                        $runTime = round($value["endTime"] - $runTime, 2);
                 }
 
                 return [
                     $key+1,
                     (string)$value["taskId"],
                     (string)$value["command"],
+                    ["pre @mb-0" => (string)json_encode($value["arguments"], JSON_PRETTY_PRINT)],
                     (string)$value["status"],
                     (string)$value["nRetries"],
-
-                    $value["startTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", (int) $value["startTime"]),
-                    $value["endTime"] == "" ? "--" : gmdate("Y-m-d H:i:s", (int) $value["endTime"]),
+                    $value["startTime"] == "" ? "--" : gmdate("Y-m-d H:i", (int) $value["startTime"]),
+                    $value["endTime"] == "" ? "--" : gmdate("Y-m-d H:i", (int) $value["endTime"]),
                     (string)$runTime,
                     fhtml(["a @href=? @btn @btn-primary" => "Details"], ["{$this->startRoute}/scheduler/{$jobId}/{$value["taskId"]}"])
                 ];
@@ -142,9 +142,9 @@ class PhoreSchedulerModule implements AppModule
             if ($jobInfo["startTime"] != null) {
                 $runTime = $jobInfo["startTime"];
                 if ($jobInfo["endTime"] === null)
-                    $runTime = time() - $runTime;
+                    $runTime = round(time() - $runTime, 2);
                 else {
-                    $runTime = $jobInfo["endTime"]- $runTime;
+                    $runTime = round($jobInfo["endTime"] - $runTime, 2);
                 }
             }
             if($jobInfo["status"] === PhoreSchedulerJob::STATUS_FAILED && $jobInfo["endTime"] !== null) {
@@ -185,7 +185,7 @@ class PhoreSchedulerModule implements AppModule
                 "Task list for job {$jobId}. Filter: {$filter}",
                 pt("table-striped table-hover")->basic_table(
                     [
-                        "#", "TaskID", "Command", "Status", "Retries",
+                        "#", "TaskID", "Command", "Args", "Status", "Retries",
                         "Start Time", "End Time", "RunTime", ""
                     ],
                     $tbl,
@@ -206,9 +206,6 @@ class PhoreSchedulerModule implements AppModule
                 throw new \InvalidArgumentException("{$this->diName} should be from type PhoreScheduler");
             $stats =  $scheduler->getConnector()->status();
             return ["pre @mb-0" => (string)trim (print_r($stats, true))];
-            return ;
-            print_r($stats);
-            return [];
         });
 
         $app->addPage("{$this->startRoute}/scheduler", function (App $app, Request $request) {

@@ -6,6 +6,8 @@
  * Time: 09:25
  */
 
+declare(strict_types=1);
+
 namespace Phore\Scheduler\Connector;
 
 
@@ -103,7 +105,7 @@ class PhoreSchedulerRedisConnector
     public function getJobById($jobId) : ?PhoreSchedulerJob
     {
         $this->ensureConnectionCalled();
-        $job = phore_unserialize($this->redis->get($jobId), [PhoreSchedulerJob::class]);
+        $job = phore_unserialize((string) $this->redis->get($jobId), [PhoreSchedulerJob::class]);
         return ($job === false) ? null : $job;
     }
 
@@ -242,7 +244,7 @@ class PhoreSchedulerRedisConnector
     public function getTaskById($jobId, $taskId) : ?PhoreSchedulerTask
     {
         $this->ensureConnectionCalled();
-        $task = phore_unserialize($this->redis->get($jobId ."_". $taskId), [PhoreSchedulerTask::class]);
+        $task = phore_unserialize((string) $this->redis->get($jobId ."_". $taskId), [PhoreSchedulerTask::class]);
         return ($task === false) ? null : $task;
     }
 
@@ -309,20 +311,20 @@ class PhoreSchedulerRedisConnector
 
     public function getTasksSuccessCount($jobId) : int
     {
-        return $this->redis->get($jobId . self::TASKS_SUCCESS_COUNT);
+        return (int) $this->redis->get($jobId . self::TASKS_SUCCESS_COUNT);
     }
 
     public function getTasksFailCount($jobId) : int
     {
-        return $this->redis->get($jobId . self::TASKS_FAIL_COUNT);
+        return (int) $this->redis->get($jobId . self::TASKS_FAIL_COUNT);
     }
 
-    public function setTasksSuccessCount($jobId) : int
+    public function setTasksSuccessCount($jobId) : bool
     {
         return $this->redis->set($jobId . self::TASKS_SUCCESS_COUNT, 0);
     }
 
-    public function setTasksFailCount($jobId) : int
+    public function setTasksFailCount($jobId) : bool
     {
         return $this->redis->set($jobId . self::TASKS_FAIL_COUNT, 0);
     }
