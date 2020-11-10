@@ -214,9 +214,9 @@ class PhoreScheduler implements LoggerAwareInterface
         }
 
         try {
-            $this->log->notice("start task with " . implode(", ",$task->arguments) . " on host {$task->execHost} pid {$task->execPid}");
+            $this->log->debug("start task with " . implode(", ",$task->arguments) . " on host {$task->execHost} pid {$task->execPid}");
             $return = ($this->commands[$task->command])($task->arguments);
-            $this->log->notice("end task with " . implode(", ",$task->arguments) . " on host {$task->execHost} pid {$task->execPid}");
+            $this->log->debug("end task with " . implode(", ",$task->arguments) . " on host {$task->execHost} pid {$task->execPid}");
             $task->endTime = microtime(true);
             $task->return = $return;
             $task->status = PhoreSchedulerTask::STATUS_OK;
