@@ -35,6 +35,9 @@ class PhoreSchedulerJobAccessor
     {
         $this->scheduler = $scheduler;
         $this->job = $job;
+        foreach ($scheduler->getCustomStatuses() as $statusId => $statusName) {
+            $job->nCustomStatusTasks[$statusId] = 0;
+        }
     }
 
 

@@ -174,4 +174,27 @@ class PhoreSchedulerTest extends TestCase
         $this->assertEquals(1, $s->getConnector()->countFinishedJobs());
     }
 
+    public function testCustomStatusJob()
+    {
+        $scheduler = $this->s;
+        $scheduler->defineCustomStatus("custom", 99);
+        $scheduler->defineCommand("custom", function ($arguments) {
+            return ['status' => 99, 'value' => 'customSuccess'];
+        });
+
+        $job = $scheduler->createJob("testCustomStatus");
+        $job->addTask("custom", ["param1" => "val1"]);
+        $job->save();
+        $jobId = $job->getJob()->jobId;
+        $taskId = $job->getTasks()[0]->taskId;
+        $this->assertEquals(true, $scheduler->runNext());
+        $finTasks = $scheduler->getConnector()->getFinishedTasks($jobId);
+        $this->assertEquals(99, $finTasks[0]->getCustomStatus());
+        $this->assertEquals($taskId, $finTasks[0]->taskId);
+        $this->assertEquals("customSuccess", $finTasks[0]->return);
+        $job = $scheduler->getConnector()->getJobById($jobId);
+        $this->assertEquals(1, $job->nCustomStatusTasks[99]);
+
+    }
+
 }

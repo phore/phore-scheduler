@@ -24,6 +24,8 @@ class PhoreScheduler implements LoggerAwareInterface
 
     private $commands = [];
 
+    private $customStatuses = [];
+
     /**
      * @var NullLogger
      */
@@ -45,6 +47,23 @@ class PhoreScheduler implements LoggerAwareInterface
     {
         $this->log = $logger;
         return $this;
+    }
+
+    public function defineCustomStatus(string $statusName, int $statusId = null) : int
+    {
+        $statusId = $statusId ?? count($this->customStatuses);
+        $this->customStatuses[$statusId] = $statusName;
+        return $statusId;
+    }
+
+    public function getCustomStatusName(int $statusId) : string
+    {
+        return $this->customStatuses[$statusId] ?? 'undefined';
+    }
+
+    public function getCustomStatuses() : array
+    {
+        return $this->customStatuses;
     }
 
     /**
@@ -216,15 +235,23 @@ class PhoreScheduler implements LoggerAwareInterface
         try {
             $this->log->debug("start task with " . implode(", ",$task->arguments) . " on host {$task->execHost} pid {$task->execPid}");
             $return = ($this->commands[$task->command])($task->arguments);
-            $this->log->debug("end task with " . implode(", ",$task->arguments) . " on host {$task->execHost} pid {$task->execPid}");
             $task->endTime = microtime(true);
-            $task->return = $return;
+            $this->log->debug("end task with " . implode(", ",$task->arguments) . " on host {$task->execHost} pid {$task->execPid}");
+            if(is_array($return) && key_exists($return['status'] ?? null, $this->customStatuses)) {
+                $task->setCustomStatus($return['status']);
+                $task->return = $return['value'] ?? null;
+            } else {
+                $task->return = $return;
+            }
             $task->status = PhoreSchedulerTask::STATUS_OK;
             $this->connector->updateTask($job->jobId, $task);
             if(!$this->connector->moveRunningTaskToDone($job->jobId, $task->taskId))
                 return true;
             $job = $this->connector->getJobById($job->jobId);
             $job->nSuccessfulTasks = $this->connector->incrementTasksSuccessCount($job->jobId);
+            if(key_exists($task->getCustomStatus(), $job->nCustomStatusTasks)) {
+                $job->nCustomStatusTasks[$task->getCustomStatus()]++;
+            }
             $this->connector->updateJob($job);
         } catch (\Error $e) {
             $errorMsg = "Job failed with error: {$e->getMessage()}\n\n" . $e->getTraceAsString();
@@ -448,6 +475,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $curJobInfo["tasks_finished"] = $this->connector->countFinishedTasks($job->jobId);
             $curJobInfo["tasks_ok"] = $this->connector->getTasksSuccessCount($job->jobId);
             $curJobInfo["tasks_failed"] = $this->connector->getTasksFailCount($job->jobId);
+            $curJobInfo["tasks_custom_status"] = $job->nCustomStatusTasks;
             $return[] = $curJobInfo;
         }
 

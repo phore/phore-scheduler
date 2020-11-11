@@ -41,6 +41,8 @@ class PhoreSchedulerJob
 
     public $nSuccessfulTasks = 0;
 
+    public $nCustomStatusTasks = [];
+
     public $startTime;
 
     public $endTime;

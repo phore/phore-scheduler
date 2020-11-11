@@ -200,14 +200,6 @@ class PhoreSchedulerModule implements AppModule
          * Scheduler overview
          */
 
-        $app->addPage("{$this->startRoute}/schedulerstatus", function (App $app) {
-            $scheduler = $app->get($this->diName);
-            if ( ! $scheduler instanceof PhoreScheduler)
-                throw new \InvalidArgumentException("{$this->diName} should be from type PhoreScheduler");
-            $stats =  $scheduler->getConnector()->status();
-            return ["pre @mb-0" => (string)trim (print_r($stats, true))];
-        });
-
         $app->addPage("{$this->startRoute}/scheduler", function (App $app, Request $request) {
 
             $scheduler = $app->get($this->diName);
@@ -242,29 +234,38 @@ class PhoreSchedulerModule implements AppModule
             usort($jobList, function ($a, $b){
                 return $b['runAtTs'] <=> $a['runAtTs'];
             });
-            $tbl = phore_array_transform($jobList, function ($index, $ji) {
+
+            $tableHeader = ["#", "JobID", "Job Name", "Status", "Task Status", "Scheduled at", ""];
+
+
+            $tbl = phore_array_transform($jobList, function ($index, $ji) use ($scheduler) {
                 $btnCancelDisabled = "";
                 $btnDeleteDisabled = " @disabled";
                 if($ji["status"] === PhoreSchedulerJob::STATUS_CANCELLED) {
                     $btnCancelDisabled = " @disabled";
                     $btnDeleteDisabled = "";
                 }
+                $taskStatus = [
+                    $ji["nTasks"] . "Tasks ( Pending:",
+                    fhtml(["a @href=?"  => "{$ji["tasks_pending"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=pending"]),
+                    ", Running:",
+                    fhtml(["a @href=?" => "{$ji["tasks_running"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=running"]),
+                    ", Failed:",
+                    fhtml(["a @href=?" => "{$ji["tasks_failed"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=failed"]),
+                    ", Success:",
+                    fhtml(["a @href=?" => "{$ji["tasks_ok"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
+                ];
+                foreach ($ji["tasks_custom_status"] as $statusId => $count) {
+                    $taskStatus[] = ", " . $scheduler->getCustomStatusName($statusId) . ":";
+                    $taskStatus[] = fhtml(["a @href=?" => "{$count}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=$statusId"]);
+                }
+                $taskStatus[] = ")";
                 return [
                     $index + 1,
                     $ji["jobId"],
                     $ji["name"],
                     $ji["status"],
-                    [
-                        $ji["nTasks"] . "Tasks ( Pending:",
-                        fhtml(["a @href=?"  => "{$ji["tasks_pending"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=pending"]),
-                        ", Running:",
-                        fhtml(["a @href=?" => "{$ji["tasks_running"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=running"]),
-                        ", Failed:",
-                        fhtml(["a @href=?" => "{$ji["tasks_failed"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=failed"]),
-                        ", Success:",
-                        fhtml(["a @href=?" => "{$ji["tasks_ok"]}"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}?status=success"]),
-                        ")"
-                    ],
+                    $taskStatus,
                     gmdate("Y-m-d H:i:s", (int) $ji["runAtTs"]) . "UTC",
                     [
                         fhtml(["a @href=? @btn @btn-primary" => "View"], ["{$this->startRoute}/scheduler/{$ji["jobId"]}"]),
@@ -288,12 +289,20 @@ class PhoreSchedulerModule implements AppModule
             $e[] = pt()->card(
                 "Scheduler $action",
                 pt("table-striped table-hover")->basic_table(
-                    ["#", "JobID", "Job Name", "Status", "Task Status", "Scheduled at", ""],
+                    $tableHeader,
                     $tbl,
                     ["","","", "", "", "", "@style=text-align:right"]
                 )
             );
             return $e;
         },  new NaviButtonWithIcon("Scheduler", "fas fa-clock"));
+
+        $app->addPage("{$this->startRoute}/schedulerstatus", function (App $app) {
+            $scheduler = $app->get($this->diName);
+            if ( ! $scheduler instanceof PhoreScheduler)
+                throw new \InvalidArgumentException("{$this->diName} should be from type PhoreScheduler");
+            $stats =  $scheduler->getConnector()->status();
+            return ["pre @mb-0" => (string)trim (print_r($stats, true))];
+        });
     }
 }

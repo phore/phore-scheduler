@@ -8,6 +8,8 @@
 
 namespace Phore\Scheduler\Type;
 
+use phpDocumentor\Reflection\Types\This;
+
 /**
  * Class PhoreSchedulerTask
  * @package Phore\MicroApp\Type
@@ -28,6 +30,8 @@ class PhoreSchedulerTask
     public $arguments;
 
     public $status;
+
+    private $customStatus;
 
     public $nRetries;
 
@@ -52,6 +56,16 @@ class PhoreSchedulerTask
         $this->arguments = $arguments;
         $this->nRetries = $retries;
         $this->timeout = $timeout;
+    }
+
+    public function setCustomStatus(int $customStatusId)
+    {
+        $this->customStatus = $customStatusId;
+    }
+
+    public function getCustomStatus() : ?int
+    {
+        return $this->customStatus;
     }
 
 }

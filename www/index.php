@@ -23,8 +23,18 @@ $app = new StatusPageApp("PhoreScheduler", "/admin");
 $app->define("phoreScheduler", function() {
     $connector = new PhoreSchedulerRedisConnector("redis");
     $connector->connect();
-
-    return new PhoreScheduler($connector);
+    $scheduler = new PhoreScheduler($connector);
+    $scheduler->defineCommand("testRunFail", function(array $args) {
+        throw new \Error("test failed");
+    });
+    $scheduler->defineCommand("testRunSuccess", function(array $args) {
+        return "test successful";
+    });
+    $scheduler->defineCommand("testRunSuccessCustom", function(array $args) {
+        return ['status' => 0, 'value' => "test successful"];
+    });
+    $scheduler->defineCustomStatus('customStatus');
+    return $scheduler;
 });
 
 $app->addModule(new PhoreSchedulerModule(""));
@@ -32,16 +42,14 @@ $app->addModule(new PhoreSchedulerModule(""));
 
 $app->addPage("/", function (PhoreScheduler $phoreScheduler, Request $request) {
 
-    $phoreScheduler->defineCommand("testRunFail", function(array $args) {
-        throw new \Error("test failed");
-    });
-    $phoreScheduler->defineCommand("testRunSuccess", function(array $args) {
-        return "test successful";
-    });
+
     $msg = "";
     if ($request->GET->has("create")) {
         $testJobRun = $phoreScheduler->createJob("test Success");
         $testJobRun->addTask("testRunSuccess", ["arg1"=>"argval1"], 1, 10);
+        $testJobRun->save();
+        $testJobRun = $phoreScheduler->createJob("test Custom");
+        $testJobRun->addTask("testRunSuccessCustom", ["arg1"=>"argval1"], 1, 10);
         $testJobRun->save();
         $testJobRun = $phoreScheduler->createJob("test Run");
         $testJobRun->addTask("testRunFail", ["arg1"=>"argval1", "arg2"=>"argval2"], 1, 10);
