@@ -277,16 +277,6 @@ class PhoreScheduler implements LoggerAwareInterface
             $this->connector->connect();
 
         foreach ($this->connector->yieldPendingJobs() as $job) {
-            if($this->connector->countPendingTasks($job->jobId) == 0 &&
-                $this->connector->countRunningTasks($job->jobId) == 0 &&
-                $this->connector->countFinishedTasks($job->jobId) == 0 &&
-                $this->connector->movePendingJobToDone($job->jobId)
-            ) {
-                $job->status = PhoreSchedulerJob::STATUS_FAILED;
-                $this->connector->updateJob($job);
-                $this->log->debug("moved empty pending job '{$job->jobId}' to done (failed)");
-                break;
-            }
             if($job->runAtTs <= microtime(true) && $this->connector->movePendingJobToRunningQueue($job->jobId)) {
                 $job->status = PhoreSchedulerJob::STATUS_RUNNING;
                 $job->startTime = microtime(true);
