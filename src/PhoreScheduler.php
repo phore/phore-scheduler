@@ -150,6 +150,12 @@ class PhoreScheduler implements LoggerAwareInterface
         return true;
     }
 
+    private function finishJob($jobId) : bool {
+        if(!$this->connector->moveRunningJobToDone($jobId)) {
+            return false;
+        }
+    }
+
     private function _validateFinishedJobState($jobId)
     {
         $job = $this->connector->getJobById($jobId);
@@ -174,7 +180,7 @@ class PhoreScheduler implements LoggerAwareInterface
     private function _cancelTasksOnTimeout(PhoreSchedulerJob $job)
     {
         foreach ($this->connector->yieldRunningTasks($job->jobId) as $task) {
-            if($task->startTime + $task->timeout < microtime(true)) {
+            if($task->startTime != 0 && $task->startTime + $task->timeout < microtime(true)) {
                 $this->_rescheduleTask($job, $task, "timeout");
             }
         }
@@ -205,6 +211,7 @@ class PhoreScheduler implements LoggerAwareInterface
             $job->endTime = microtime(true);
             $this->connector->updateJob($job);
         }
+        return true;
     }
 
     /**
@@ -302,11 +309,13 @@ class PhoreScheduler implements LoggerAwareInterface
         }
 
         if(!$this->_runNextTask($job)) {
-            //no pending tasks were found. If all tasks are finished we can try to move this Job to done
+            //Job has no pending tasks. If all tasks are finished we can try to move this Job to done
             //also make sure the job has a 'done' status (STATUS_CANCELLED, STATUS_FAILED or STATUS_OK)
             $finishedStatus = [PhoreSchedulerJob::STATUS_CANCELLED, PhoreSchedulerJob::STATUS_FAILED, PhoreSchedulerJob::STATUS_OK];
             if($this->connector->countFinishedTasks($jobId) === $job->nTasks && in_array($job->status, $finishedStatus)) {
-                $this->connector->moveRunningJobToDone($jobId);
+                if(!$this->connector->moveRunningJobToDone($jobId)) {
+                    return true;
+                }
             }
             return true;
         }
@@ -327,7 +336,9 @@ class PhoreScheduler implements LoggerAwareInterface
             return true;
         }
 
-        $this->connector->moveRunningJobToDone($jobId);
+        if(!$this->connector->moveRunningJobToDone($jobId)) {
+            return true;
+        }
         if($job->status !== PhoreSchedulerJob::STATUS_FAILED) {
             $job->status = PhoreSchedulerJob::STATUS_OK;
         }
